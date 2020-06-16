@@ -1,0 +1,493 @@
+---
+title: "DJIA-1"
+author: "MK"
+date: "25/05/2020"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(ISwR)
+```
+
+# Reading stock data for Initial Analysis 
+
+
+```{r}
+stock_data <- read.csv("/Users/mayadakazem/Desktop/Capstone_Project/Stock_Data.csv", header = TRUE)
+
+```
+
+## Descriptive Analysis 
+
+```{r}
+
+head(stock_data)
+```
+
+Let's see the dataset in more detail 
+```{r}
+str(stock_data)
+describe(stock_data)
+```
+```{r}
+# check for missing values 
+
+sum(is.na(stock_data$Date) == TRUE)
+length(stock_data$Date)
+sum(is.na(stock_data$Open) == TRUE)
+length(stock_data$Open)
+sum(is.na(stock_data$High) == TRUE)
+length(stock_data$High)
+sum(is.na(stock_data$Low) == TRUE)
+length(stock_data$Low)
+sum(is.na(stock_data$Adj.Close) == TRUE)
+length(stock_data$Adj.Close)
+sum(is.na(stock_data$Volume) == TRUE)
+length(stock_data$Volume)
+```
+
+# No missing data is identified!
+
+```{r}
+install.packages("ggplot2")
+```
+
+
+# 1- Univariate Analysis 
+
+```{r}
+open_mean <- mean(stock_data$Open)
+high_mean <- mean(stock_data$High)
+low_mean <- mean(stock_data$Low)
+close_mean <- mean(stock_data$Adj.Close)
+vol_mean <- mean(stock_data$Volume)
+open_mean
+high_mean
+low_mean
+close_mean
+vol_mean
+```
+
+```{r}
+mod_open <- mode(stock_data$Open)
+mod_high <- mode(stock_data$High)
+mod_low <- mode(stock_data$Low)
+mod_close <- mode(stock_data$Adj.Close)
+mod_vol <- mode(stock_data$Volume)
+mod_open
+mod_high
+mod_low
+mod_close
+mod_vol
+```
+
+
+```{r}
+
+med_open <- median(stock_data$Open)
+med_high <- median(stock_data$High)
+med_low <- median(stock_data$Low)
+med_close <- median(stock_data$Adj.Close)
+med_vol <- median(stock_data$Volume)
+med_open
+med_high
+med_low
+med_close
+med_vol
+```
+# Minimum and Maximum numbers are calculated in MS Excel 
+
+```{r}
+std_open <- StdDev(stock_data$Open)
+std_high <- StdDev(stock_data$High)
+std_low <- StdDev(stock_data$Low)
+std_close <- StdDev(stock_data$Adj.Close)
+#std_1 <- StdDev(stock_data$Volume) 
+std_open
+std_high
+std_low
+#std_close
+#std_v done in MS Excel 
+```
+
+  # 2- Bivariate Analysis: plotting variables   
+
+
+```{r pressure, echo=FALSE}
+plot(stock_data$Date,stock_data$High, main="DJIA Highest Stock Prices", xlab="Date", ylab="High Price" )
+
+```
+
+
+```{r pressure, echo=FALSE}
+plot(stock_data$Date,stock_data$Open, main="DJIA Open Stock Prices", xlab="Date", ylab="Open Price" )
+```
+
+
+```{r pressure, echo=FALSE}
+plot(stock_data$Date,stock_data$Low, main="DJIA Lowest Stock Prices", xlab="Date", ylab="Low Price" )
+```
+
+
+```{r pressure, echo=FALSE}
+plot(stock_data$Date,stock_data$Adj.Close, main="DJIA Close Stock Prices", xlab="Date", ylab="Close Price" )
+```
+```{r}
+# To study if we have outliers, let's print a boxplot: 
+
+boxplot(stock_data$Date,stock_data$Adj.Close, main="DJIA Close Stock Prices", xlab="Date", ylab="Close Price" )
+
+```
+ 
+
+# Study this graph more to add year on x-axis and y- axis needs investigation as it's not clear what's the number  
+
+```{r pressure, echo=FALSE}
+hist(stock_data$Volume, main="DJIA Volume Traded for Eight Years (2008-2016)", xlab="Frequency", ylab="Volume" )
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+boxplot(stock_data$Date,stock_data$Volume, main="DJIA Close Stock Prices", xlab="Date", ylab="Volume" )
+```
+
+```{r}
+plot(stock_data$Date,stock_data$Volume, main="DJIA Close Stock Prices", xlab="Date", ylab="Volume" )
+
+# There r some outliers I can see but I won't delete as they are so few - I feel the impact is negligible 
+```
+
+
+## Bivariate Analysis: 
+```{r}
+library(dplyr)
+
+```
+
+```{r}
+vol <- plot(stock_data$Date, stock_data$Volume, type="l", col="green", xlab="Date", ylab="Volume", main="DJIA Stock Volume for 8 years")
+
+```
+## I need to study the stock data variables and how they are correlated. Open, Low, High, Close, and Volume - I am excluding Date column as it is non-numeric column  
+
+```{r}
+
+# Those are high correlated columns > 0.99
+cor(stock_data$High, stock_data$Open)
+```
+
+
+
+```{r}
+# Those are high correlated columns > 0.99
+cor(stock_data$Open, stock_data$Low)
+
+```
+```{r}
+# Those are high correlated columns > 0.99
+cor(stock_data$Open, stock_data$Close)
+```
+
+```{r}
+cor(stock_data$Open, stock_data$Volume)
+
+# This is good result - Stock Open Price is inversely correlated with Volume 
+```
+
+
+```{r}
+# Those are high correlated columns > 0.99
+cor(stock_data$Open, stock_data$Adj.Close)
+```
+
+
+```{r}
+cor(stock_data$Adj.Close, stock_data$Volume)
+# The Adj.Close column is our main focus that generates the output variable (Label) in Combined csv File. 
+# The columns are inversely correlated almost %70 
+```
+
+
+# Plot Correlation between all numeric variables of Stock data; hence, need to create a dataframe with numberic attributes only (exclude Date)
+```{r}
+num_stock_data <- data.frame(stock_data$Open, stock_data$High, stock_data$Low, stock_data$Close, stock_data$Volume, stock_data$Adj.Close)
+head(num_stock_data) 
+```
+
+# Let's study correlation between stock data attributes and plot it  
+
+
+```{r}
+stock_cor <- cor(num_stock_data)
+
+```
+
+```{r}
+# For more illustartion on the correlation, let's plot and visualize it: 
+
+corrplot(stock_cor, method = "ellipse")
+```
+# U can tell every attribute is highly correlated with the other except with Volume; i.e., we have to pick one with Volume. I shall pick Adj.Close as our measure when DJIA prices goes up or down and eliminate Open, High, Low, and Close attributes. 
+
+```{r}
+# To see the correlation coefficient values and p-values of stock attributes, let's use rcor function. But we need to use the library (Hmisc)
+
+# install.packages('Hmisc') - added (#) symbol to avoid installing the library multiple times
+
+library(Hmisc)
+```
+
+```{r}
+install.packages("PerformanceAnalytics")
+library(PerformanceAnalytics) 
+chart.Correlation(num_stock_data, histogram=TRUE, pch=19)
+```
+ # Let's read the Combined data file and see the Class attribute (Label) 
+
+```{r}
+# Reading the Combined File
+project_data <- read.csv("/Users/mayadakazem/Desktop/Capstone_Project/Combined_News_DJIA.csv", header = TRUE)
+```
+
+```{r}
+head(project_data)
+str(project_data)
+```
+# Check for missing values 
+```{r}
+sum(is.na(project_data$Date) == TRUE)
+length(project_data$Date)
+sum(is.na(project_data$Label) == TRUE)
+length(project_data$Label)
+sum(is.na(project_data$Top1) == TRUE)
+length(project_data$Top1)
+sum(is.na(project_data$Top2) == TRUE)
+length(project_data$Top2)
+sum(is.na(project_data$Top3) == TRUE)
+length(project_data$Top3)
+sum(is.na(project_data$Top4) == TRUE)
+length(project_data$Top4)
+sum(is.na(project_data$Top5) == TRUE)
+length(project_data$Top5)
+sum(is.na(project_data$Top6) == TRUE)
+length(project_data$Top6)
+sum(is.na(project_data$Top7) == TRUE)
+length(project_data$Top7)
+sum(is.na(project_data$Top8) == TRUE)
+length(project_data$Top8)
+sum(is.na(project_data$Top9) == TRUE)
+length(project_data$Top9)
+sum(is.na(project_data$Top10) == TRUE)
+length(project_data$Top10)
+sum(is.na(project_data$Top11) == TRUE)
+length(project_data$Top11)
+sum(is.na(project_data$Top12) == TRUE)
+length(project_data$Top12)
+sum(is.na(project_data$Top13) == TRUE)
+length(project_data$Top13)
+sum(is.na(project_data$Top14) == TRUE)
+length(project_data$Top14)
+sum(is.na(project_data$Top15) == TRUE)
+length(project_data$Top15)
+sum(is.na(project_data$Top16) == TRUE)
+length(project_data$Top16)
+sum(is.na(project_data$Top17) == TRUE)
+length(project_data$Top17)
+sum(is.na(project_data$Top18) == TRUE)
+length(project_data$Top18)
+sum(is.na(project_data$Top19) == TRUE)
+length(project_data$Top19)
+sum(is.na(project_data$Top20) == TRUE)
+length(project_data$Top20)
+sum(is.na(project_data$Top21) == TRUE)
+length(project_data$Top21)
+sum(is.na(project_data$Top22) == TRUE)
+length(project_data$Top22)
+sum(is.na(project_data$Top23) == TRUE)
+length(project_data$Top23)
+sum(is.na(project_data$Top24) == TRUE)
+length(project_data$Top24)
+sum(is.na(project_data$Top25) == TRUE)
+length(project_data$Top25)
+```
+# No missed data is identified! 
+
+# Let's visualize the output variable (Label)
+
+```{r}
+# Plotting pie chart for nominal (logical) data type: 
+
+lbl_table <- table(project_data$Label)
+lbls <- paste(names(lbl_table),",", lbl_table, sep="")
+pie(lbl_table, labels = lbls,
+   main="Pie Chart of Class Attribute Label")
+
+```
+
+ 
+```{r}
+# NOT DONE MAYADA !!! Try to plot for one year / month / week to see the output varies clearly in a line or dotted plot 
+plot(project_data$Date, project_data$Label,type = "p", main="Relation ship between stock prices volume movement according to date", xlab="Date", ylab="Volume")
+```
+
+
+# Columns from Top1 .... to Top25 has punctuation characters we need to get rid of. After scanning manually the data, I noticed many words are there for no reason and can be cut like: ; , : . : ; [ ] { } ( ) etc
+# I have a list for excluding specific found stop words to delete them only (i.e., without adding a space) and some words or characters will leave them there as they add value.   
+
+```{r}
+## Testing 
+
+project_r6 <- read.csv("/Users/mayadakazem/Desktop/Capstone_Project/Combined_News_DJIA_r6.csv", header = TRUE)
+
+r6_Top1_step <- gsub("/r/"," ",project_r6$Top1) 
+r6_Top2_step <- gsub("/r/"," ",project_r6$Top2)
+r6_Top3_step <- gsub("/r/"," ",project_r6$Top3)
+r6_Top4_step <- gsub("/r/"," ",project_r6$Top4)
+r6_Top5_step <- gsub("/r/"," ",project_r6$Top5)
+r6_Top6_step <- gsub("/r/"," ",project_r6$Top6)
+r6_Top7_step <- gsub("/r/"," ",project_r6$Top7)
+r6_Top8_step <- gsub("/r/"," ",project_r6$Top8)
+r6_Top9_step <- gsub("/r/"," ",project_r6$Top9)
+r6_Top10_step <- gsub("/r/"," ",project_r6$Top10)
+r6_Top11_step <- gsub("/r/"," ",project_r6$Top11)
+r6_Top12_step <- gsub("/r/"," ",project_r6$Top12)
+r6_Top13_step <- gsub("/r/"," ",project_r6$Top13)
+r6_Top14_step <- gsub("/r/"," ",project_r6$Top14)
+r6_Top15_step <- gsub("/r/"," ",project_r6$Top15)
+r6_Top16_step <- gsub("/r/"," ",project_r6$Top16)
+r6_Top17_step <- gsub("/r/"," ",project_r6$Top17)
+r6_Top18_step <- gsub("/r/"," ",project_r6$Top18)
+r6_Top19_step <- gsub("/r/"," ",project_r6$Top19)
+r6_Top20_step <- gsub("/r/"," ",project_r6$Top20)
+r6_Top21_step <- gsub("/r/"," ",project_r6$Top21)
+r6_Top22_step <- gsub("/r/"," ",project_r6$Top22)
+r6_Top23_step <- gsub("/r/"," ",project_r6$Top23)
+r6_Top24_step <- gsub("/r/"," ",project_r6$Top24)
+r6_Top25_step <- gsub("/r/"," ",project_r6$Top25)
+
+r6_Top1 <- gsub(pattern="[[:punct:]]", r6_Top1_step,replacement="")
+r6_Top2 <- gsub(pattern="[[:punct:]]", r6_Top2_step, replacement="")
+r6_Top3 <- gsub(pattern="[[:punct:]]", r6_Top3_step, replacement="")
+r6_Top4 <- gsub(pattern="[[:punct:]]", r6_Top4_step, replacement="")
+r6_Top5 <- gsub(pattern="[[:punct:]]", r6_Top5_step, replacement="")
+r6_Top6 <- gsub(pattern="[[:punct:]]", r6_Top6_step, replacement="")
+r6_Top7 <- gsub(pattern="[[:punct:]]", r6_Top7_step, replacement="")
+r6_Top8 <- gsub(pattern="[[:punct:]]", r6_Top8_step, replacement="")
+r6_Top9 <- gsub(pattern="[[:punct:]]", r6_Top9_step, replacement="")
+r6_Top10 <- gsub(pattern="[[:punct:]]", r6_Top10_step, replacement="")
+r6_Top11 <- gsub(pattern="[[:punct:]]", r6_Top11_step, replacement="")
+r6_Top12 <- gsub(pattern="[[:punct:]]", r6_Top12_step, replacement="")
+r6_Top13 <- gsub(pattern="[[:punct:]]", r6_Top13_step, replacement="")
+r6_Top14 <- gsub(pattern="[[:punct:]]", r6_Top14_step, replacement="")
+r6_Top15 <- gsub(pattern="[[:punct:]]", r6_Top15_step, replacement="")
+r6_Top16 <- gsub(pattern="[[:punct:]]", r6_Top16_step, replacement="")
+r6_Top17 <- gsub(pattern="[[:punct:]]", r6_Top17_step, replacement="")
+r6_Top18 <- gsub(pattern="[[:punct:]]", r6_Top18_step, replacement="")
+r6_Top19 <- gsub(pattern="[[:punct:]]", r6_Top19_step, replacement="")
+r6_Top20 <- gsub(pattern="[[:punct:]]", r6_Top20_step, replacement="")
+r6_Top21 <- gsub(pattern="[[:punct:]]", r6_Top21_step, replacement="")
+r6_Top22 <- gsub(pattern="[[:punct:]]", r6_Top22_step, replacement="")
+r6_Top23 <- gsub(pattern="[[:punct:]]", r6_Top23_step, replacement="")
+r6_Top24 <- gsub(pattern="[[:punct:]]", r6_Top24_step, replacement="")
+r6_Top25 <- gsub(pattern="[[:punct:]]", r6_Top25_step, replacement="")
+
+project_r6_clean <- data.frame(project_r6$Date, r6_Top1, r6_Top2, r6_Top3, r6_Top4, r6_Top5, r6_Top7, r6_Top8, r6_Top9, r6_Top10, r6_Top11, r6_Top12, r6_Top13, r6_Top14, r6_Top15, r6_Top16, r6_Top17, r6_Top18, r6_Top19, r6_Top20, r6_Top21, r6_Top22, r6_Top23, r6_Top24, r6_Top25, project_r6$Label)
+
+# head(project_r6_clean)
+r6_Top1[1:6]
+r6_Top2[1:6]
+r6_Top3[1:6]
+r6_Top4[1:6] 
+```
+# Q: What is the quotation marks for? we deleted the punctuation and it was fine. Also, the small (b) at the begining of each line. Would that affect on the sentiment analysis? Would I lose the first word if I leave it?
+
+```{r}
+#for (row in 1:nrow(project_data)) {
+
+    new_Top1 <- gsub(pattern="[[:punct:]]",  project_data$Top1, replacement="")
+    new_Top2 <- gsub(pattern="[[:punct:]]",  project_data$Top2, replacement="")
+    new_Top3 <- gsub(pattern="[[:punct:]]",  project_data$Top3, replacement="")
+    new_Top4 <- gsub(pattern="[[:punct:]]",  project_data$Top4, replacement="")
+    new_Top5 <- gsub(pattern="[[:punct:]]",  project_data$Top5, replacement="")
+    new_Top6 <- gsub(pattern="[[:punct:]]",  project_data$Top6, replacement="")
+    new_Top7 <- gsub(pattern="[[:punct:]]",  project_data$Top7, replacement="")
+    new_Top8 <- gsub(pattern="[[:punct:]]",  project_data$Top8, replacement="")
+    new_Top9 <- gsub(pattern="[[:punct:]]",  project_data$Top9, replacement="")
+    new_Top10 <- gsub(pattern="[[:punct:]]",  project_data$Top10, replacement="")
+    new_Top11 <- gsub(pattern="[[:punct:]]",  project_data$Top11, replacement="")
+    new_Top12 <- gsub(pattern="[[:punct:]]",  project_data$Top12, replacement="")
+    new_Top13 <- gsub(pattern="[[:punct:]]",  project_data$Top13, replacement="")
+    new_Top14 <- gsub(pattern="[[:punct:]]",  project_data$Top14, replacement="")
+    new_Top15 <- gsub(pattern="[[:punct:]]",  project_data$Top15, replacement="")
+    new_Top16 <- gsub(pattern="[[:punct:]]",  project_data$Top16, replacement="")
+    new_Top17 <- gsub(pattern="[[:punct:]]",  project_data$Top17, replacement="")
+    new_Top18 <- gsub(pattern="[[:punct:]]",  project_data$Top18, replacement="")
+    new_Top19 <- gsub(pattern="[[:punct:]]",  project_data$Top19, replacement="")
+    new_Top20 <- gsub(pattern="[[:punct:]]",  project_data$Top20, replacement="")
+    new_Top21 <- gsub(pattern="[[:punct:]]",  project_data$Top21, replacement="")
+    new_Top22 <- gsub(pattern="[[:punct:]]",  project_data$Top22, replacement="")
+    new_Top23 <- gsub(pattern="[[:punct:]]",  project_data$Top23, replacement="")
+    new_Top24 <- gsub(pattern="[[:punct:]]",  project_data$Top24, replacement="")
+    new_Top25 <- gsub(pattern="[[:punct:]]",  project_data$Top25, replacement="")
+#} 
+new_Top1
+new_Top2
+new_Top3
+new_Top4
+new_Top5
+new_Top6
+new_Top7
+new_Top8
+new_Top9
+new_Top10
+new_Top11
+new_Top12
+new_Top13
+new_Top14
+new_Top15
+new_Top16
+new_Top17
+new_Top18
+new_Top19
+new_Top20
+new_Top21
+new_Top22
+new_Top23
+new_Top24
+new_Top25
+# tail(project_data)
+
+r6_Top1
+```
+
+
+# Create new data frame with clean data (without punctuation characters, without control characters, and converted all to lower case)
+
+```{r}
+new_project_data <- data.frame(project_data$Date, tolower(new_Top1), tolower(new_Top2), tolower(new_Top3) ,tolower(new_Top4),tolower(new_Top5),tolower(new_Top6),tolower(new_Top7),tolower(new_Top8),tolower(new_Top9), tolower(new_Top10), tolower(new_Top11), tolower(new_Top12),tolower(new_Top13),tolower(new_Top14), tolower(new_Top15), tolower(new_Top16), tolower(new_Top17),tolower(new_Top18), tolower(new_Top19), tolower(new_Top20), tolower(new_Top21), tolower(new_Top22), tolower(new_Top23), tolower(new_Top24), tolower(new_Top25), project_data$Label)
+
+head(new_project_data)
+```
+
+```{r}
+str(new_project_data)
+
+
+```
+
+
+```{r}
