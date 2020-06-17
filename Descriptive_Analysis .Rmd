@@ -415,6 +415,31 @@ r6_Top4[1:6]
 ```
 # Q: What is the quotation marks for? we deleted the punctuation and it was fine. Also, the small (b) at the begining of each line. Would that affect on the sentiment analysis? Would I lose the first word if I leave it?
 
+
+```{r}
+# data is almost clean - left with a small b letter at the begining of each cell Top1, Top2, ... Top 25. Delete? Let's research!
+# Convert clean testing data (project_r6_clean) to lower case
+#project_r6_clean
+
+project_r6_update <- data.frame(project_r6_clean$project_r6.Date, sub("b","",tolower(r6_Top1)), sub("b","",tolower(r6_Top2)), sub("b","",tolower(r6_Top3)), sub("b","",tolower(r6_Top4)), sub("b","",tolower(r6_Top5)), sub("b","",tolower(r6_Top6)), sub("b","",tolower(r6_Top7)), sub("b","",tolower(r6_Top8)), sub("b","",tolower(r6_Top9)), sub("b","",tolower(r6_Top10)), sub("b","",tolower(r6_Top11)), sub("b","",tolower(r6_Top12)), sub("b","",tolower(r6_Top13)), sub("b","",tolower(r6_Top14)), sub("b","",tolower(r6_Top15)), sub("b","",tolower(r6_Top16)), sub("b","",tolower(r6_Top17)), sub("b","",tolower(r6_Top18)), sub("b","",tolower(r6_Top19)), sub("b","",tolower(r6_Top20)), sub("b","",tolower(r6_Top21)), sub("b","",tolower(r6_Top22)), sub("b","",tolower(r6_Top23)), sub("b","",tolower(r6_Top24)), sub("b","",tolower(r6_Top25)), project_r6_clean$project_r6.Label)
+
+head(project_r6_update)
+
+#str(project_r6_update)
+
+```
+
+
+```{r}
+# (project_r6_update) This is my currently data frame I used for Testing 
+
+# The data frame (project_data) is my future data frame with 27 columns and 1989 obs. 
+
+
+```
+
+
+
 ```{r}
 #for (row in 1:nrow(project_data)) {
 
