@@ -1,0 +1,1171 @@
+---
+title: "Capstone_Project_MK"
+author: "Mayada Kazem"
+date: "23/06/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r Preparing R} 
+# Removing all list objects from ls workspace before we start our work 
+rm(list=ls())
+
+#install.packages("PerformanceAnalytics")
+#install.packages("zoo")
+#install.packages("ggplot2")
+#install.packages("dplyr") 
+#install.packages("tm")
+#install.packages("text2vec")
+#install.packages("SnowballC")
+#install.packages("textstem")
+#install.packages("quanteda")
+#install.packages("SimilaR")
+#install.packages("SentimentAnalysis")
+#install.packages("class")
+#install.packages("gmodels")
+#install.packages("forecast")
+
+library(ISwR)
+library(zoo)
+library(PerformanceAnalytics) 
+library(ggplot2) 
+library(dplyr)
+library (Hmisc) 
+library(SnowballC)
+library(NLP)
+library(tm)
+library(text2vec) 
+library(textstem)
+library(quanteda)
+library(SimilaR)
+library(SentimentAnalysis)
+library(class)
+library(gmodels)
+library(forecast) 
+```
+
+# Initial Analysis 
+
+```{r}
+stock_data <- read.csv("/Users/mayadakazem/Desktop/Capstone_Project/Stock_Data.csv", header = TRUE, stringsAsFactors = FALSE)
+head(stock_data)
+```
+
+
+Let's see the stock dataset in more detail 
+```{r}
+stock_data$Date <- as.Date(stock_data$Date) 
+
+str(stock_data)
+class(stock_data)
+colnames(stock_data)
+head(stock_data)
+```
+
+The project dataset has financial daily data; i.e., every business day we have a row and for the weekend we don't have data. This is considered irregular dataset and ts function (used to create time series object) won't work; frequency argument can't be defined. Hence, creating zoo object. (Zeilei's Ordered Observations) object. 
+
+```{r}
+# Create a zoo object to explore the data and plot time series graphs 
+
+stockdata_zoo <- zoo(stock_data, order.by = stock_data$Date)
+str(stockdata_zoo)
+
+DJIA_Close_zoo = zoo(x=stock_data$Adj.Close, order.by = stock_data$Date)
+class(DJIA_Close_zoo)
+str(DJIA_Close_zoo)
+plot(DJIA_Close_zoo, main="DJIA Close Stock Prices", xlab="Date", ylab="Close Price", col = "blue", lty=1)
+
+```
+
+```{r}
+Volume_zoo = zoo(x=stock_data$Volume, order.by = stock_data$Date)
+class(Volume_zoo)
+str(Volume_zoo)
+
+plot(Volume_zoo, main="DJIA Volume Traded", xlab="Date", ylab="Volume", col="red", lty=1)
+```
+
+
+```{r}
+Open_zoo = zoo(x=stock_data$Open, order.by = stock_data$Date)
+class(Open_zoo)
+str(Open_zoo)
+
+plot(Open_zoo, main="DJIA Open Price", xlab="Date", ylab="Open Price", col="green", lty=1)
+```
+
+```{r}
+High_zoo = zoo(x=stock_data$High, order.by = stock_data$Date)
+class(High_zoo)
+str(High_zoo)
+
+plot(High_zoo, main="DJIA High Price", xlab="Date", ylab="Highest Price", col="green", lty=1)
+```
+
+```{r}
+Low_zoo = zoo(x=stock_data$Low, order.by = stock_data$Date)
+class(Low_zoo)
+str(Low_zoo)
+
+plot(Low_zoo, main="DJIA Lowest Prices", xlab="Date", ylab="Lowest Price", col="green", lty=1)
+```
+
+```{r}
+Close_zoo = zoo(x=stock_data$Close, order.by = stock_data$Date)
+class(Close_zoo)
+str(Close_zoo)
+
+plot(Close_zoo, main="DJIA Close Prices", xlab="Date", ylab="Close Price", col="green", lty=1)
+```
+
+```{r}
+# Analyze more stock data file; is it regular? seasonal?
+
+is.regular(stockdata_zoo, strict = TRUE)
+is.regular(stockdata_zoo, strict = FALSE)
+
+```
+
+Stock data is irregular - Hmmmm, why?
+
+```{r}
+# Do we have miising data? 
+
+sum(is.na(stockdata_zoo$Date))
+sum(is.na(stockdata_zoo$Open))
+sum(is.na(stockdata_zoo$High))
+sum(is.na(stockdata_zoo$Low))
+sum(is.na(stockdata_zoo$Close))
+sum(is.na(stockdata_zoo$Volume))
+sum(is.na(stockdata_zoo$Adj.Close))
+```
+No missing data.  
+
+```{r}
+# But missing weekend days / rows, look at below missing weekend rows for 2008-08-09, 2008-08-10
+head(stockdata_zoo)
+```
+
+
+```{r}
+# Checking for missing values to ensure data quality
+
+sum(is.na(stock_data$Date) == TRUE)
+length(stock_data$Date)
+sum(is.na(stock_data$Open) == TRUE)
+length(stock_data$Open)
+sum(is.na(stock_data$High) == TRUE)
+length(stock_data$High)
+sum(is.na(stock_data$Low) == TRUE)
+length(stock_data$Low)
+sum(is.na(stock_data$Adj.Close) == TRUE)
+length(stock_data$Adj.Close)
+sum(is.na(stock_data$Volume) == TRUE)
+length(stock_data$Volume)
+
+# No missing data is identified
+```
+
+## Univariate Analysis 
+
+Measure Mean for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+```{r}
+# Stock dataset 
+open_mean <- mean(stock_data$Open)
+high_mean <- mean(stock_data$High)
+low_mean <- mean(stock_data$Low)
+close_mean <- mean(stock_data$Adj.Close)
+vol_mean <- mean(stock_data$Volume)
+open_mean
+high_mean
+low_mean
+close_mean
+vol_mean
+```
+
+Measure Mode for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+```{r}
+
+mod_open <- mode(stock_data$Open)
+mod_high <- mode(stock_data$High)
+mod_low <- mode(stock_data$Low)
+mod_close <- mode(stock_data$Adj.Close)
+mod_vol <- mode(stock_data$Volume)
+mod_open
+mod_high
+mod_low
+mod_close
+mod_vol
+```
+
+Measure Median for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+
+```{r}
+
+med_open <- median(stock_data$Open)
+med_high <- median(stock_data$High)
+med_low <- median(stock_data$Low)
+med_close <- median(stock_data$Adj.Close)
+med_vol <- median(stock_data$Volume)
+med_open
+med_high
+med_low
+med_close
+med_vol
+
+```
+
+Measure Standard Deviation for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+
+```{r}
+std_open <- StdDev(stock_data$Open)
+std_high <- StdDev(stock_data$High)
+std_low <- StdDev(stock_data$Low)
+std_close <- StdDev(stock_data$Adj.Close)
+
+std_open
+std_high
+std_low
+std_close
+```
+Volume standard deviation measurement is done in MS Excel. R couldn't handle the big numbers
+
+## Bivariate Analysis
+
+### Volume and ADJ.Close columns graph 
+```{r, echo=FALSE}
+# Create zoo object for two objects to be able to plot them
+
+DJIA_Volume_zoo = cbind(DJIA_Close_zoo,Volume_zoo)
+class(DJIA_Volume_zoo)
+head(DJIA_Volume_zoo)
+
+ # plot multiple series at once
+ plot(DJIA_Volume_zoo, plot.type="single", col=c("blue","red"), lty=1:2, lwd=2, main="DJIA Close Stock Prices vs Volume Traded", xlab="Date", ylab="Close Price")
+ legend(x="topleft", legend=c("DJIA Close","Volume"), col=c("blue","red"),lty=1:2) 
+
+```
+
+### Volume and Open columns graph
+
+```{r, echo=FALSE}
+
+Open_Volume_zoo = cbind(Open_zoo,Volume_zoo)
+class(Open_Volume_zoo)
+head(Open_Volume_zoo)
+
+ # plot multiple series at once
+ plot(Open_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Open Stock Prices vs Volume Traded", xlab="Date", ylab="Open Price")
+ legend(x="topleft", legend=c("DJIA Open","Volume"), col=c("green","red"),lty=1:2) 
+
+```
+
+### Volume and High columns graph
+
+```{r , echo=FALSE}
+
+High_Volume_zoo = cbind(High_zoo,Volume_zoo)
+class(High_Volume_zoo)
+head(High_Volume_zoo)
+
+ # plot multiple series at once
+ plot(High_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Highest Stock Prices vs Volume Traded", xlab="Date", ylab="High Price")
+ legend(x="topleft", legend=c("DJIA High","Volume"), col=c("green","red"),lty=1:2) 
+
+```
+
+### Volume and Low columns graph 
+
+```{r , echo=FALSE}
+
+Low_Volume_zoo = cbind(Low_zoo,Volume_zoo)
+class(Low_Volume_zoo)
+head(Low_Volume_zoo)
+
+ # plot multiple series at once
+ plot(Low_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Lowest Stock Prices vs Volume Traded", xlab="Date", ylab="Low Price")
+ legend(x="topleft", legend=c("DJIA Low","Volume"), col=c("green","red"),lty=1:2)  
+```
+
+### Adj.Close and Close columns graph 
+
+```{r}
+# How about Close column with ADJ.Close column? They seem so similar in description and data values. I'll plot and see
+
+AdjClose_Close_zoo = cbind(DJIA_Close_zoo,Close_zoo)
+class(AdjClose_Close_zoo)
+head(AdjClose_Close_zoo)
+
+ # plot multiple series at once
+ plot(AdjClose_Close_zoo, plot.type="single", col=c("blue","green"), lty=1:2, lwd=2, main="DJIA Close Stock Prices versus Close Price", xlab="Close", ylab="DJIA Close Price")
+ legend(x="topleft", legend=c("DJIA Close","Close"), col=c("blue","green"),lty=1:2)
+
+```
+From the plot and observing the data, those two columns looks to me identical.
+
+Create data frame to plot the correlation for numeric columns without Date 
+```{r}
+
+num_stock_data <- data.frame(stock_data$Open, stock_data$High, stock_data$Low, stock_data$Close, stock_data$Volume, stock_data$Adj.Close)
+
+```
+
+When we plot the correlation later, You'll see that again. Hence, In my analysis, I'll consider Close column as redundant. 
+
+### Analyze data for ouliers 
+
+```{r , echo=FALSE}
+
+ggplot(stock_data) + geom_boxplot(aes(x = Date, y = Volume, group = Date))
+
+ggplot(stock_data) + geom_boxplot(aes(x = Date, y = Adj.Close, group = Date))
+
+``` 
+
+From the above two graphs, I don't see there are outliers for DJIA Close prices but an incresing trend to DJIA close prices. For Volume column, there are some values that can be considered as ouliers but for the purpose of this project and considering the Label Output Variable is categorial (is either zero or one), I'll take all values as is. 
+
+# Feature Selection 
+
+Plotting Stock Dataset Variables Correlation 
+```{r}
+stock_cor <- cor(num_stock_data)
+stock_cor
+```
+The above variables are highly correlated columns; values are > 0.99 but not Volume. We can see that Volume is inversley correlated to Stock Prices attributes 
+
+## Visulaize Correlation 
+To visualize the correlation and read p-values, we can plot this correlation 
+
+```{r}
+chart.Correlation(num_stock_data, histogram=TRUE, pch=19)
+
+```
+DJIA_Close column is considered only for prices data anlysis since High, Low, Open, and Close are highliy correlated. Hence, Combined data file is created based on Label column (output variable) indicating when DJIA Close is up or the same compared from t-1 to t, Label = 1 and when DJIA Close is down then Label = 0. 
+
+
+To proceed to Sentiment Analysis and its impact on DJIA stock proces, let's read combined data file first and see the Class attribute (Label) 
+
+```{r}
+project_data <- read.csv("/Users/mayadakazem/Desktop/Capstone_Project/Combined_News_DJIA.csv", header = TRUE, stringsAsFactors = FALSE)
+head(project_data)
+str(project_data)
+
+```
+
+Label is class variable and Top1 to Top25 are character columns not ready for sentiment analysis. Let's see the output variable 
+
+```{r}
+# Plotting pie chart for output variable (Label): 
+
+lbl_table <- table(project_data$Label)
+lbls <- paste(names(lbl_table),",", lbl_table, sep="")
+pie(lbl_table, labels = lbls,
+   main="Pie Chart of Class Attribute Label")
+```
+
+### Check for missing values
+
+```{r}
+# There are empty cells in project_data dataframe and we need to write NA in that cell to identify easily 
+project_data[project_data==""] <- NA
+
+sum(is.na(project_data$Date) == TRUE)
+length(project_data$Date)
+sum(is.na(project_data$Label) == TRUE)
+length(project_data$Label)
+sum(is.na(project_data$Top1) == TRUE)
+length(project_data$Top1)
+sum(is.na(project_data$Top2) == TRUE)
+length(project_data$Top2)
+sum(is.na(project_data$Top3) == TRUE)
+length(project_data$Top3)
+sum(is.na(project_data$Top4) == TRUE)
+length(project_data$Top4)
+sum(is.na(project_data$Top5) == TRUE)
+length(project_data$Top5)
+sum(is.na(project_data$Top6) == TRUE)
+length(project_data$Top6)
+sum(is.na(project_data$Top7) == TRUE)
+length(project_data$Top7)
+sum(is.na(project_data$Top8) == TRUE)
+length(project_data$Top8)
+sum(is.na(project_data$Top9) == TRUE)
+length(project_data$Top9)
+sum(is.na(project_data$Top10) == TRUE)
+length(project_data$Top10)
+sum(is.na(project_data$Top11) == TRUE)
+length(project_data$Top11)
+sum(is.na(project_data$Top12) == TRUE)
+length(project_data$Top12)
+sum(is.na(project_data$Top13) == TRUE)
+length(project_data$Top13)
+sum(is.na(project_data$Top14) == TRUE)
+length(project_data$Top14)
+sum(is.na(project_data$Top15) == TRUE)
+length(project_data$Top15)
+sum(is.na(project_data$Top16) == TRUE)
+length(project_data$Top16)
+sum(is.na(project_data$Top17) == TRUE)
+length(project_data$Top17)
+sum(is.na(project_data$Top18) == TRUE)
+length(project_data$Top18)
+sum(is.na(project_data$Top19) == TRUE)
+length(project_data$Top19)
+sum(is.na(project_data$Top20) == TRUE)
+length(project_data$Top20)
+sum(is.na(project_data$Top21) == TRUE)
+length(project_data$Top21)
+sum(is.na(project_data$Top22) == TRUE)
+length(project_data$Top22)
+sum(is.na(project_data$Top23) == TRUE)
+length(project_data$Top23)
+sum(is.na(project_data$Top24) == TRUE)
+length(project_data$Top24)
+sum(is.na(project_data$Top25) == TRUE)
+length(project_data$Top25)
+
+```
+Top23 has one missed data identified, Top24 and Top25 has three data items (or rows) identified. I choose to delete those columns and move forward with dataframe of Date, Label, Top1, Top2 ... to Top22 columns.
+
+Top1 to Top 22 columns are many columns to analyze its sentiment and try to predict DJIA stock market performnace from. Hence, the intent is to reduce analysis as much as we can while keeping the performance to its optimum. 
+
+I sense that forward dimensionality reduction is the best choice. Adding one column after anothe til we reach optimum model performance. 
+
+
+# Text Data Preparation
+
+Columns from Top1, Top2 .... to Top22 have Reddit headlines' text to analyze. First, read Top1 column only and consider it for sentiment analysis; i.e., without the other 21 headline columns. let's clean it
+
+Delete punctuation marks
+```{r}
+
+new_Top1 <- gsub(pattern="[[:punct:]]",  project_data$Top1, replacement="") 
+new_Top1 
+```
+
+Delete the small letter (b) that's at the begining of Top1 that's created after punctuation and convert all letters to small
+
+``` {r}
+Top1_updt <- sub(pattern="b",  tolower(new_Top1), replacement="")
+Top1_updt
+
+```
+
+Create a new data frame with three columns only; Date, Top1 (after cleaned), Lable with 1989 obsevations 
+
+```{r}
+project_updt <- data.frame(project_data$Date, Top1_updt, project_data$Label)
+
+head (project_updt)
+
+```
+
+Reading Top1 Column only
+
+```{r}
+# Top1_updt col 
+doc <- 0
+for (i in c(1:1989)) {doc[i] <- as.character(project_updt$Top1_updt[i])}
+doc.list <- as.list(doc[1:1989])
+N.docs <- length(doc.list)
+names(doc.list) <- paste0("Doc", c(1:N.docs))
+
+```
+ 
+Change format of texts to prepare data for analysis - create my.corpus 
+```{r}
+# Create Unigram 
+Query <- c("poland legalize marijuanadjia djia prices are expected to be  higher") 
+my.docs <- VectorSource(c(doc.list, Query))
+my.docs$Names <- c(names(doc.list), Query)
+my.corpus <- Corpus(my.docs)
+my.corpus 
+```
+
+Top1 headline is almost clean - needs to unite the tense of words only (lemmatization or stemming) 
+
+```{r}
+#Hint: use getTransformations() function in tm Package
+#https://cran.r-project.org/web/packages/tm/tm.pdf
+getTransformations()
+
+# Removing stop words    
+my.corpus <- tm_map(my.corpus, removeWords, stopwords("English"))
+```
+
+Remove irrelevant to project's research questions' words 
+```{r}
+wordsToRemove <- c("(9yearold)","(21yearold)", "(17yearold)", "(now)")
+my.corpus <- tm_map(my.corpus, removeWords, words=wordsToRemove)
+
+```
+
+Lemmatization
+```{r}
+my.corpus <- lemmatize_words(my.corpus)
+my.corpus
+```
+
+# 1- Unigram sentiment analytics for one independent variable 
+Creating a uni-gram Term Document Matrix
+
+```{r}
+# unigram with Top1_updt
+term.doc.matrix <- TermDocumentMatrix(my.corpus)
+
+inspect(term.doc.matrix[1:10,1:10])
+```
+
+Converting the generated TDM into a matrix and displaying the first 6 rows 
+
+```{r}
+term.doc.matrix <- as.matrix(term.doc.matrix)
+head(term.doc.matrix)
+
+```
+
+## Measure TF-IDF 
+
+```{r}
+ # Compute the TF-IDF from the term frequency vector
+
+get.tf.idf.weights <- function(tf.vec) { 
+  n.docs <- length(tf.vec)
+  doc.frequency <- length(tf.vec[tf.vec > 0]) 
+  weights <- rep(0, length(tf.vec))
+  relative.frequency <- tf.vec[tf.vec > 0] / sum(tf.vec[tf.vec > 0]) 
+#TF(ij) * IDF(i)
+  weights[tf.vec > 0]<-  (1 + log(tf.vec[tf.vec > 0])) * log(1 + n.docs/doc.frequency)
+  return(weights)
+}
+
+```
+
+To rank the top 10 similar words from Top1 Column based on "Query", compute cosine similarity and produce heat map
+
+```{r}
+# Prepare the matrix to perform calculation 
+
+tfidf.matrix <- t(apply(term.doc.matrix, 1,
+                        FUN = function(row) {get.tf.idf.weights(row)})) 
+colnames(tfidf.matrix) <- my.docs$Names
+
+head(tfidf.matrix)
+dim(tfidf.matrix)
+
+```
+
+Compute Similarity and produce heat may
+
+```{r}
+similarity.matrix <- sim2(t(tfidf.matrix), method = 'cosine')
+heatmap(similarity.matrix) 
+
+```
+
+Display the top 10 ranks similar to "Query"
+
+```{r}
+sort(similarity.matrix, decreasing = TRUE)[1:10]
+ 
+```
+
+## Sentiment Analysis 
+
+```{r}
+# Top1_updt unigram 
+sentiment <- analyzeSentiment(my.corpus)
+sentiment
+```
+Henry’s Financial dictionary (Henry 2008) and Loughran-McDonald Financial dictionary (Loughran and McDonald 2011) are mostly recommended for financial analysis. However, I'll take all dictionaries values, average them and consider RatioUncertaintyLM in our calculations as well 
+
+```{r}
+# Averaging the senses of all available four dictionaries to get a sentiment value to each sentence/row 
+
+Top1_sent <- (sentiment$SentimentGI + sentiment$SentimentHE+ sentiment$SentimentLM + sentiment$RatioUncertaintyLM + sentiment$SentimentQDAP ) / 4
+
+```
+Save Query sentiment analysis seperately 
+
+```{r}
+
+Query_Sentiment <- as.vector(sentiment[1,])
+Query_sent <- Top1_sent[1]
+
+#Delete the first row "Query" values and documents from Top1 sentiment analysis; it should be 1989  
+
+Top1_sent <- Top1_sent[-1]
+str(Top1_sent) 
+
+# Now we can add the sentiment values and create new dataframe 
+project_df1 <- data.frame(project_updt$project_data.Date, Top1_sent, project_updt$project_data.Label)
+
+head(project_df1) 
+str(project_df1)
+
+```
+
+# Experimental Design 
+## Data Split 
+
+Split project_df1 dataframe to taining and testing data sets (70% to 30%)
+
+```{r}
+train_index_Top1 <- sample(1:nrow(project_df1), 0.7 * nrow(project_df1))
+train_set_Top1 <- project_df1[train_index_Top1,]
+test_set_Top1  <- project_df1[-train_index_Top1,]
+```
+For testing and making sure our split is right: 
+
+```{r}
+summary(train_index_Top1)
+summary(train_set_Top1)
+summary(test_set_Top1) 
+nrow(train_set_Top1)
+nrow(test_set_Top1)
+
+# let's have a look at the data in the testing set: 
+head(test_set_Top1)
+```
+
+# Modeling 
+
+Stock Market Prediction using DJIA prices output variable Label
+
+Since Label column is logical (has 0/1 values), then first we shall perform logistic regression using glm. let's train the prediction model: 
+
+```{r}
+# H0, Null Hypothesis when the market prediction performance matches the output variable Label in performnace 
+#H1, There is a difference between market prediction performance and last year trend analysis concluded from analyzing sentimentally Reddit world news  
+
+market_model1_train <- glm (formula = project_updt.project_data.Label ~ Top1_sent, data = train_set_Top1, family = "binomial")  
+
+```
+See the training data set 
+
+```{r}
+nrow(market_model1_train) 
+summary(market_model1_train)
+str(market_model1_train)
+
+```
+
+Now it's time to apply our prediction model on test set
+
+```{r}
+market_model1_test <- predict(market_model1_train, test_set_Top1, type="response")
+
+summary(market_model1_test)
+str(market_model1_test)
+
+```
+Traing set has negative and positive numbers; look at miminum and maximum values. But the testing dataset doesn't have. All positive values.  
+
+```{r}
+# If we want to see the testing dataset  
+market_model1_test
+```
+
+# Performance Evaluation
+
+```{r}
+# We shall replace any value of Top1 sentiment that is greater  than 0.5 (i.e., 50%) to 1 (or Positive), otherwise, it is zero (or Negative) 
+predicted_Top1 <- ifelse(market_model1_test>0.50, 1, 0)   
+
+cbind(test_set_Top1, predicted_Top1)
+str(test_set_Top1)
+
+```
+
+## Confusion Matrix
+```{r}
+# Building the Confusion Matrix
+confusionMatrix_Top1 <- table(actual = test_set_Top1$project_updt.project_data.Label, predicted = predicted_Top1)
+
+confusionMatrix_Top1
+```
+
+# Performance Measures 
+
+After having the cross table numbers, calculate the accuracy, precision, recall to measure the model performance and sensitivity and specificity
+
+Calculate Accuracy 
+```{r}
+Acc <- sum(diag(confusionMatrix_Top1))/nrow(test_set_Top1)
+# Accuracy is almost %47 (rounded to one digit)  
+```
+
+Calculate Recall
+```{r}
+#Rec <- 
+```
+
+Calculate Precision 
+```{r}
+#Pre <- 
+```
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# p is Precision from above 
+# r is Precision from above
+
+#Fscore = 2*Pre*Rec/(Pre+Rec) 
+#Fscore 
+```
+
+## KNN Regression Model 
+```{r}
+
+# Divide the data set into 2 portions in the ratio of 70: 30 for the training and testing datasets respectively
+#str(project_df1)
+
+knn_df <- data.frame(project_df1$Top1_sent, project_df1$project_updt.project_data.Label)
+str(knn_df)
+set.seed(1)
+index_knn_predict1 <- sample(1:nrow(knn_df), 0.7 *nrow(knn_df))
+market_knn_predict1_train <- knn_df[index_knn_predict1,]
+market_knn_predict1_test <- knn_df[-index_knn_predict1,]
+
+class_train1 <- market_knn_predict1_train[,2] 
+class_test1 <- market_knn_predict1_test[,2] 
+
+str(class_train1)
+```
+
+Calculate K 
+
+```{r}
+# number of observations (n) = 1989 
+n= 1989 
+k = round(sqrt(n))
+k 
+
+```
+
+Predict KNN model on Testing set 
+```{r}
+market_prediction1_test <- knn(train = market_knn_predict1_train[1], test = market_knn_predict1_test[1],cl = class_train1, k=45) 
+
+market_prediction1_test
+
+#market_prediction1_test
+```
+
+Plotting confusion matrix for k=45
+```{r}
+CrossTable(x=class_test1, y=market_prediction1_test, prop.chisq=FALSE, prop.t = FALSE, prop.r = FALSE, prop.c = FALSE)
+```
+
+```{r}
+# calculate Precision, Recal , ...etc -TBD for k=45
+```
+
+Run KNN model when K = 10 and plot the confusion matrix 
+```{r}
+# k=10 is so popular - just like to try it and see the results
+
+market_prediction1_test <- knn(train = market_knn_predict1_train[1], test = market_knn_predict1_test[1],cl = class_train1, k=10) 
+CrossTable(x=class_test1, y=market_prediction1_test, prop.chisq=FALSE, prop.t = FALSE, prop.r = FALSE, prop.c = FALSE)
+market_prediction1_test
+```
+
+### Performance Measurement - Confudion Matrix 
+```{r}
+# Calculate Precision, Recal, ...etc for k=  10, 45 - TBD 
+```
+
+## ARIMA Model  
+Prepare dataframe for time series prediction. My dataframe is project_df1 (has Date column), use the zoo object (time series object) to perform prediction  
+
+```{r}
+# Since auto.arima handles only univariate dataframe, then create it:
+project_df1_zoo <- zoo(project_df1, order.by = project_df1$project_updt.project_data.Date)
+
+project_arima <- data.frame(project_df1_zoo$Top1_sent) 
+```
+
+Then change zoo object to ts for better auto.arima performance as this function applies to regular time series dataset   
+
+```{r}
+project_arima1_ts <- as.ts(project_arima)
+head(project_arima1_ts)
+
+```
+
+Prepare data frame for ARIMA Performance Analytics 
+
+```{r}
+# Split ts.dataframe to start prediction
+
+train_index_arima1ts <- sample(1:nrow(project_arima1_ts), 0.7 * nrow(project_arima1_ts))
+train_set_arima1ts <- project_arima1_ts[train_index_arima1ts,]
+test_set_arima1ts  <- project_arima1_ts[-train_index_arima1ts,]
+
+```
+
+Train the ARIMA prediction model 
+```{r}
+
+market_predict_arima1ts_train <- auto.arima(train_set_arima1ts) 
+
+market_predict_arima1ts_train
+summary(market_predict_arima1ts_train)
+```
+
+Apply the ARIMA algorithm on Test set 
+
+```{r}
+market_predict_arima1ts_test <- forecast(auto.arima(test_set_arima1ts))
+market_predict_arima1ts_test
+summary(market_predict_arima1ts_test)
+
+```
+White noise result (ARIMA (0,0,0); i.e., uncorrelated errors). ME is good.
+
+Plot the ARIMA Prediction Model 
+
+```{r}
+plot(market_predict_arima1ts_test)
+
+```
+
+# 2- Multi-Variate regression for unigram sentiment 
+Include Top1 and Top2 columns in sentiment analysis; each column considering unigram 
+
+```{r}
+
+# Columns from Top1, Top2 .... to Top22 have Reddit headlines' text to analyze. Now we are analyzing Top2 taking one word at a time to analyze
+
+# Delete punctuation marks
+
+new_Top2 <- gsub(pattern="[[:punct:]]",  project_data$Top2, replacement="") 
+new_Top2 
+
+# Delete the small letter (b) that's at the begining of Top1 that's created after punctuation and convert all letters to small
+
+Top2_updt <- sub(pattern="b",  tolower(new_Top2), replacement="")
+Top2_updt
+
+# Create a new data frame with three columns only; Date, Top1 (after cleaned), Lable with 1989 obsevations 
+
+project_updt <- data.frame(project_data$Date, Top1_updt, Top2_updt, project_data$Label)
+
+head (project_updt)
+
+```
+
+Preparing Top2 column 
+```{r}
+# Top2_updt col 
+doc2 <- 0
+for (i in c(1:1989)) {doc2[i] <- as.character(project_updt$Top2_updt[i])}
+doc2.list <- as.list(doc2[1:1989])
+N.docs2 <- length(doc2.list)
+names(doc2.list) <- paste0("Doc", c(1:N.docs2))
+```
+
+```{r}
+# Create Top2 Unigram 
+Query <- c("Shocking pictures of a policeman on fire after a petrol bomb was on fire. British goverment wants private companies to build super database to track citizens phone and internet usage") 
+my.docs2 <- VectorSource(c(doc2.list, Query))
+my.docs2$Names <- c(names(doc2.list), Query)
+myCorpus2 <- Corpus(my.docs2)
+myCorpus2
+
+```
+
+Removing stop words
+
+```{r}
+#getTransformations()
+
+my.corpus2 <- tm_map(myCorpus2, removeWords, stopwords("English"))
+```
+Remove irrelevant to project's research questions' words 
+
+```{r}
+wordsToRemove <- c("(9yearold)","(21yearold)", "(17yearold)", "(now)")
+my.corpus2 <- tm_map(my.corpus2, removeWords, words=wordsToRemove)
+```
+
+Lemmatization 
+
+```{r}
+my.corpus2 <- lemmatize_words(my.corpus2)
+my.corpus2
+```
+Creating a uni-gram Term Document Matrix
+
+```{r}
+# unigram with Top2_updt
+term.doc.matrix2 <- TermDocumentMatrix(my.corpus2)
+
+inspect(term.doc.matrix2[1:10,1:10])
+```
+
+Converting the generated TDM into a matrix and displaying the first 6 rows 
+
+```{r}
+term.doc.matrix2 <- as.matrix(term.doc.matrix2)
+head(term.doc.matrix2)
+
+```
+
+# Compute the TF-IDF from the term frequency vector
+
+```{r}
+
+get.tf.idf.weights2 <- function(tf.vec2) { 
+  n.docs.2 <- length(tf.vec2)
+  doc.frequency.2 <- length(tf.vec2[tf.vec2 > 0]) 
+  weights2 <- rep(0, length(tf.vec2))
+  relative.frequency.2 <- tf.vec2[tf.vec2 > 0] / sum(tf.vec2[tf.vec2 > 0]) 
+#TF(ij) * IDF(i)
+  weights2[tf.vec2 > 0]<-  (1 + log(tf.vec2[tf.vec2 > 0])) * log(1 + n.docs.2/doc.frequency.2)
+  return(weights2)
+}
+
+```
+
+To rank the top 10 similar words from Top1 Column based on "Query", compute cosine similarity and produce heat map
+
+```{r}
+# Prepare the matrix to perform calculation 
+
+tfidf.matrix2 <- t(apply(term.doc.matrix2, 1,
+                        FUN = function(row) {get.tf.idf.weights2(row)})) 
+colnames(tfidf.matrix2) <- my.docs2$Names
+
+head(tfidf.matrix2)
+dim(tfidf.matrix2)
+
+```
+
+Compute Similarity and produce heat may
+
+```{r}
+similarity.matrix2 <- sim2(t(tfidf.matrix2), method = 'cosine')
+heatmap(similarity.matrix2) 
+
+```
+
+Display the top 10 ranks similar to "Query"
+
+```{r}
+sort(similarity.matrix2, decreasing = TRUE)[1:10]
+ 
+```
+# Sentiment Analysis 
+```{r}
+# Top2_updt unigram 
+sentiment2 <- analyzeSentiment(my.corpus2)
+sentiment2
+
+```
+
+
+Averaging the senses of all available four dictionaries to get a sentiment value to each sentence/row 
+
+```{r}
+Top2_sent <- (sentiment2$SentimentGI + sentiment2$SentimentHE+ sentiment2$SentimentLM + sentiment2$RatioUncertaintyLM + sentiment2$SentimentQDAP ) / 4
+
+```
+Save Query sentiment analysis seperately 
+
+```{r}
+
+Query_Sentiment2 <- as.vector(sentiment2[1,])
+Query_sent2 <- Top2_sent[1]
+
+#Delete the first row "Query" values and documents from Top1 sentiment analysis; it should be 1989  
+
+Top2_sent <- Top2_sent[-1]
+str(Top1_sent) 
+
+# Now we can add the sentiment values and create new dataframe 
+project_df1 <- data.frame(project_updt$project_data.Date, Top1_sent, Top2_sent, project_updt$project_data.Label)
+
+head(project_df1) 
+str(project_df1)
+```
+
+# Experimental Design 
+## Data Split 
+
+Split project_updt dataframe to taining and testing data sets (70% to 30%)
+
+```{r}
+train_index_Top2 <- sample(1:nrow(project_df1), 0.7 * nrow(project_df1))
+train_set_Top2 <- project_df1[train_index_Top2,]
+test_set_Top2  <- project_df1[-train_index_Top2,]
+```
+For testing and making sure our split is right: 
+
+```{r}
+summary(train_index_Top2)
+summary(train_set_Top2)
+summary(test_set_Top2) 
+nrow(train_set_Top2)
+nrow(test_set_Top2)
+
+# let's have a look at the data in the testing set: 
+head(test_set_Top2)
+```
+
+## Modeling Multi-Variate Unigram 
+
+```{r}
+market_model2_train <- glm (formula = project_updt.project_data.Label ~ Top1_sent + Top2_sent, data = train_set_Top2, family = "binomial")  
+
+```
+
+See the training data set 
+
+```{r}
+nrow(market_model2_train) 
+summary(market_model2_train)
+str(market_model2_train)
+
+```
+
+Now it's time to apply our prediction model on test set
+
+```{r}
+market_model2_test <- predict(market_model2_train, test_set_Top2, type="response")
+
+summary(market_model2_test)
+str(market_model2_test)
+
+```
+  
+
+```{r}
+# If we want to see the testing dataset  
+market_model2_test
+```
+
+# Performance Evaluation
+
+```{r}
+# We shall replace any value of predicted Top2 sentiment that is greater  than 0.5 (i.e., 50%) to 1 (or Positive), otherwise, it is zero (or Negative) 
+predicted_Top2 <- ifelse(market_model2_test>0.50, 1, 0)   
+
+cbind(test_set_Top2, predicted_Top2)
+str(test_set_Top2)
+
+```
+
+## Confusion Matrix
+```{r}
+# Building the Confusion Matrix
+confusionMatrix_Top2 <- table(actual = test_set_Top2$project_updt.project_data.Label, predicted = predicted_Top2)
+
+confusionMatrix_Top2
+```
+
+# Performance Measures 
+
+After having the cross table numbers, calculate the accuracy, precision, recall to measure the model performance and sensitivity and specificity
+
+Calculate Accuracy 
+```{r}
+Acc2 <- sum(diag(confusionMatrix_Top2))/nrow(test_set_Top2)
+
+Acc2
+# Accuracy is almost %48 (rounded to one digit) - almost the same for univariate regression   
+```
+
+Calculate Recall
+```{r}
+#Rec <- 
+```
+
+Calculate Precision 
+```{r}
+#Pre <- 
+```
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# p is Precision from above 
+# r is Precision from above
+
+#Fscore = 2*Pre*Rec/(Pre+Rec) 
+#Fscore 
+```
+
+## KNN Regression Model 
+```{r}
+
+# Divide the data set into 2 portions in the ratio of 70: 30 for the training and testing datasets respectively
+#str(project_df1)
+#head(project_df1)
+
+#knn_df <- data.frame(project_df1$Top1_sent, project_df1$project_updt.project_data.Label)
+#str(knn_df)
+set.seed(1)
+index_knn_predict2 <- sample(1:nrow(project_df1), 0.7 *nrow(project_df1))
+market_knn_predict2_train <- project_df1[index_knn_predict2,]
+market_knn_predict2_test <- project_df1[-index_knn_predict2,]
+
+class_train2 <- market_knn_predict2_train[,4] 
+class_test2 <- market_knn_predict2_test[,4] 
+
+str(class_train2)
+```
+
+
+Predict KNN model from Training set on Testing set 
+```{r}
+market_prediction2_test <- knn(train = market_knn_predict2_train[2:3], test = market_knn_predict2_test[2:3],cl = class_train2, k=45) 
+
+market_prediction2_test
+
+```
+
+Plotting confusion matrix for k=45
+```{r}
+CrossTable(x=class_test2, y=market_prediction2_test, prop.chisq=FALSE, prop.t = FALSE, prop.r = FALSE, prop.c = FALSE)
+```
+
+
+
+```{r}
+# calculate Precision, Recal , ...etc -TBD for k=45
+```
+
+Run KNN model when K = 10 and plot the confusion matrix 
+```{r}
+# k=10 is so popular - just like to try it and see the results
+
+market_prediction2_test <- knn(train = market_knn_predict2_train[2:3], test = market_knn_predict2_test[2:3],cl = class_train2, k=10) 
+CrossTable(x=class_test2, y=market_prediction2_test, prop.chisq=FALSE, prop.t = FALSE, prop.r = FALSE, prop.c = FALSE)
+market_prediction2_test
+```
+
+### Performance Measurement - Confudion Matrix 
+```{r}
+# Calculate Precision, Recal, ...etc for k=  10, 45 - TBD 
+```
+
+
+
