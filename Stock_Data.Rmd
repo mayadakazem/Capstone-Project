@@ -1,0 +1,452 @@
+---
+title: "Untitled"
+author: "Mayada Kazem"
+date: "22/07/2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Preparing R 
+
+```{r} 
+# Removing all list objects from ls workspace before we start our work 
+rm(list=ls())
+library(ISwR)
+library(zoo)
+library(PerformanceAnalytics) 
+library(ggplot2) 
+library(dplyr)
+library(SnowballC)
+library(NLP)
+library(tm)
+library(text2vec) 
+library(textstem)
+library(SimilaR)
+library(SentimentAnalysis)
+library(class)
+library(gmodels)
+library(forecast)
+library(tidytext)
+library(tidyr)
+library(tidyverse)
+```
+# STOCK DATA 
+# Initial Analysis 
+
+```{r}
+stock_data <- read.csv("C:/Users/WATERTON/Desktop/Mayada/Stock_Data.csv", header = TRUE, stringsAsFactors = FALSE)
+head(stock_data)
+```
+
+
+Let's see the stock dataset in more detail 
+```{r}
+stock_data$Date <- as.Date(stock_data$Date) 
+
+str(stock_data)
+class(stock_data)
+colnames(stock_data)
+head(stock_data)
+```
+
+The project dataset has financial daily data; i.e., every business day we have a row and for the weekend we don't have data. This is considered irregular dataset and ts function (used to create time series object) won't work; frequency argument can't be defined. Hence, creating zoo object. (Zeilei's Ordered Observations) object. 
+
+```{r}
+# Create a zoo object to explore the data and plot time series graphs 
+
+stockdata_zoo <- zoo(stock_data, order.by = stock_data$Date)
+str(stockdata_zoo)
+
+
+DJIA_Close_zoo = zoo(x=stock_data$Adj.Close, order.by = stock_data$Date)
+class(DJIA_Close_zoo)
+str(DJIA_Close_zoo)
+plot(DJIA_Close_zoo, main="DJIA Close Stock Prices", xlab="Date", ylab="Close Price", col = "blue", lty=1)
+
+```
+
+```{r}
+Volume_zoo = zoo(x=stock_data$Volume, order.by = stock_data$Date)
+class(Volume_zoo)
+str(Volume_zoo)
+
+plot(Volume_zoo, main="DJIA Volume Traded", xlab="Date", ylab="Volume", col="red", lty=1)
+```
+
+
+```{r}
+Open_zoo = zoo(x=stock_data$Open, order.by = stock_data$Date)
+class(Open_zoo)
+str(Open_zoo)
+
+plot(Open_zoo, main="DJIA Open Price", xlab="Date", ylab="Open Price", col="green", lty=1)
+```
+
+```{r}
+High_zoo = zoo(x=stock_data$High, order.by = stock_data$Date)
+class(High_zoo)
+str(High_zoo)
+
+plot(High_zoo, main="DJIA High Price", xlab="Date", ylab="Highest Price", col="green", lty=1)
+```
+
+```{r}
+Low_zoo = zoo(x=stock_data$Low, order.by = stock_data$Date)
+class(Low_zoo)
+str(Low_zoo)
+
+plot(Low_zoo, main="DJIA Lowest Prices", xlab="Date", ylab="Lowest Price", col="green", lty=1)
+```
+
+```{r}
+Close_zoo = zoo(x=stock_data$Close, order.by = stock_data$Date)
+class(Close_zoo)
+str(Close_zoo)
+
+plot(Close_zoo, main="DJIA Close Prices", xlab="Date", ylab="Close Price", col="green", lty=1)
+```
+
+```{r}
+# Analyze more stock data file; is it regular? seasonal?
+
+is.regular(stockdata_zoo, strict = TRUE)
+is.regular(stockdata_zoo, strict = FALSE)
+
+```
+
+Stock data is irregular - Hmmmm, why?
+
+```{r}
+# Do we have miising data? 
+
+sum(is.na(stockdata_zoo$Date))
+sum(is.na(stockdata_zoo$Open))
+sum(is.na(stockdata_zoo$High))
+sum(is.na(stockdata_zoo$Low))
+sum(is.na(stockdata_zoo$Close))
+sum(is.na(stockdata_zoo$Volume))
+sum(is.na(stockdata_zoo$Adj.Close))
+```
+No missing data.  
+
+```{r}
+# Take a look at the data first 6 rows 
+head(stockdata_zoo)
+```
+But missing weekend days / rows, look at above missing weekend rows for 2008-08-09, 2008-08-10
+
+## Data Seasonality 
+
+A good way to see if our dataset has seasonality, plot it
+
+```{r}
+autoplot.zoo(stockdata_zoo, facets = Series~.) 
+
+```
+
+Not very clear graph to illustrate seasonality. However, I can see DJIA.Close seems to have seasonal trend; Volume has some outliers. Let's proceed to uni-variate and bi-variate analysis, it'll be clearer to see that. 
+
+## Univariate Analysis 
+
+Measure Mean for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+```{r}
+# Stock dataset 
+open_mean <- mean(stock_data$Open)
+high_mean <- mean(stock_data$High)
+low_mean <- mean(stock_data$Low)
+close_mean <- mean(stock_data$Adj.Close)
+vol_mean <- mean(stock_data$Volume)
+open_mean
+high_mean
+low_mean
+close_mean
+vol_mean
+```
+
+Measure Mode for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close  
+
+```{r}
+
+mod_open <- mode(stock_data$Open)
+mod_high <- mode(stock_data$High)
+mod_low <- mode(stock_data$Low)
+mod_close <- mode(stock_data$Adj.Close)
+mod_vol <- mode(stock_data$Volume)
+mod_open
+mod_high
+mod_low
+mod_close
+mod_vol
+```
+
+Measure Median for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+
+```{r}
+
+med_open <- median(stock_data$Open)
+med_high <- median(stock_data$High)
+med_low <- median(stock_data$Low)
+med_close <- median(stock_data$Adj.Close)
+med_vol <- median(stock_data$Volume)
+med_open
+med_high
+med_low
+med_close
+med_vol
+
+```
+
+Measure Standard Deviation for all numeric variables; Open, High, Low, Close, Volume, and DJIA Close
+
+
+```{r}
+std_open <- StdDev(stock_data$Open)
+std_high <- StdDev(stock_data$High)
+std_low <- StdDev(stock_data$Low)
+std_close <- StdDev(stock_data$Adj.Close)
+
+std_open
+std_high
+std_low
+std_close
+```
+Volume standard deviation measurement is done in MS Excel. R couldn't handle the big numbers
+
+## Bivariate Analysis
+
+### Volume and ADJ.Close columns graph 
+```{r, echo=FALSE}
+# Create zoo object for two objects to be able to plot them
+
+DJIA_Volume_zoo = cbind(DJIA_Close_zoo,Volume_zoo)
+class(DJIA_Volume_zoo)
+head(DJIA_Volume_zoo)
+
+ # plot multiple series at once
+ plot(DJIA_Volume_zoo, plot.type="single", col=c("blue","red"), lty=1:2, lwd=2, main="DJIA Close Stock Prices vs Volume Traded", xlab="Date", ylab="Close Price")
+ legend(x="topleft", legend=c("DJIA Close","Volume"), col=c("blue","red"),lty=1:2) 
+
+```
+
+### Volume and Open columns graph
+
+```{r, echo=FALSE}
+
+Open_Volume_zoo = cbind(Open_zoo,Volume_zoo)
+class(Open_Volume_zoo)
+head(Open_Volume_zoo)
+
+ # plot multiple series at once
+ plot(Open_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Open Stock Prices vs Volume Traded", xlab="Date", ylab="Open Price")
+ legend(x="topleft", legend=c("DJIA Open","Volume"), col=c("green","red"),lty=1:2) 
+
+```
+
+### Volume and High columns graph
+
+```{r , echo=FALSE}
+
+High_Volume_zoo = cbind(High_zoo,Volume_zoo)
+class(High_Volume_zoo)
+head(High_Volume_zoo)
+
+ # plot multiple series at once
+ plot(High_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Highest Stock Prices vs Volume Traded", xlab="Date", ylab="High Price")
+ legend(x="topleft", legend=c("DJIA High","Volume"), col=c("green","red"),lty=1:2) 
+
+```
+
+### Volume and Low columns graph 
+
+```{r , echo=FALSE}
+
+Low_Volume_zoo = cbind(Low_zoo,Volume_zoo)
+class(Low_Volume_zoo)
+head(Low_Volume_zoo)
+
+ # plot multiple series at once
+ plot(Low_Volume_zoo, plot.type="single", col=c("green","red"), lty=1:2, lwd=2, main="DJIA Lowest Stock Prices vs Volume Traded", xlab="Date", ylab="Low Price")
+ legend(x="topleft", legend=c("DJIA Low","Volume"), col=c("green","red"),lty=1:2)  
+```
+
+### Adj.Close and Close columns graph 
+
+```{r}
+# How about Close column with ADJ.Close column? They seem so similar in description and data values. I'll plot and see
+
+AdjClose_Close_zoo = cbind(DJIA_Close_zoo,Close_zoo)
+class(AdjClose_Close_zoo)
+head(AdjClose_Close_zoo)
+
+ # plot multiple series at once
+ plot(AdjClose_Close_zoo, plot.type="single", col=c("blue","green"), lty=1:2, lwd=2, main="DJIA Close Stock Prices versus Close Price", xlab="Close", ylab="DJIA Close Price")
+ legend(x="topleft", legend=c("DJIA Close","Close"), col=c("blue","green"),lty=1:2)
+
+```
+From the plot and observing the data, those two columns looks to me identical.
+
+Create data frame for numeric columns without Date to plot  
+```{r}
+
+num_stock_data <- data.frame(stock_data$Open, stock_data$High, stock_data$Low, stock_data$Close, stock_data$Volume, stock_data$Adj.Close)
+
+```
+
+When we plot the correlation later, You'll see that again. Hence, In my analysis, I'll consider Close column as redundant. 
+
+### Analyze data for ouliers 
+
+```{r , echo=FALSE}
+
+ggplot(stock_data) + geom_boxplot(aes(x = Date, y = Volume, group = Date))
+
+ggplot(stock_data) + geom_boxplot(aes(x = Date, y = Adj.Close, group = Date))
+
+``` 
+
+From the above two graphs, I don't see there are outliers for DJIA Close prices but an incresing trend to DJIA close prices. For Volume column, there are some values that can be considered as ouliers but for the purpose of this project and considering the Label Output Variable is categorial (is either zero or one), I'll take all values as is. 
+
+# Feature Selection 
+
+Plotting Stock Dataset Variables Correlation 
+```{r}
+stock_cor <- cor(num_stock_data)
+stock_cor
+```
+The above variables are highly correlated columns; values are > 0.99 but not Volume. We can see that Volume is inveresley correlated to Stock Prices attributes 
+
+## Visulaize Correlation 
+To visualize the correlation and read p-values, we can plot this correlation 
+
+```{r}
+chart.Correlation(num_stock_data, histogram=TRUE, pch=19)
+
+```
+DJA.Close column is considered only for prices data anlysis since High, Low, Open, and Close are highliy correlated. Hence those four columns shall be eliminated from our stock data analysis and a new stock data frame shall have three columns only 
+
+```{r}
+newstock_df <- data.frame(stock_data$Date, stock_data$Volume, stock_data$Adj.Close)
+head(newstock_df)
+
+```
+
+
+## ARIMA Model  
+Prepare dataframe for time series prediction. My dataframe is DJIA_Close_zoo (has Date column), use the zoo object (time series object) to perform prediction  
+
+```{r}
+# Since auto.arima handles only univariate dataframe, then create it:
+
+head(newstock_df)
+as.Date(newstock_df$stock_data.Date)
+
+# change to zoo object and see the first 6 rows: 
+project_stock_zoo <- zoo(newstock_df, order.by = newstock_df$stock_data.Date)
+head(project_stock_zoo)
+# Create a df of one column for optimum auto.arima function performance: 
+project_stock_arima <- data.frame(project_stock_zoo$stock_data.Adj.Close) 
+head(project_stock_arima)
+
+```
+
+
+
+### Data Split
+Prepare data frame for ARIMA Performance Analytics 
+
+```{r}
+# Split ts dataframe to start prediction 
+
+#n_st = nrow(project_stock_arima) 
+#n_st
+# For testing; same no. 1989
+#train_stock <- round(0.70389 * n_st) 
+#test_stock <- n_st - train_stock
+#nrow(train_stock)
+project_stock_arimats <- as.ts(project_stock_arima)
+head(project_stock_arimats)
+train_stock_arimats <- project_stock_arimats[1:1400,]
+test_stock_arimats <- project_stock_arimats[1401:1989,]
+#nrow(train_stock_arimats)
+#nrow(test_stock_arimats)
+```
+
+Train the ARIMA prediction model 
+```{r}
+
+#market_predict_arima_train <- auto.arima(train_stock_arimats, trace = TRUE) 
+market_predict_arima_train <- auto.arima(train_stock_arimats, trace = TRUE) 
+
+market_predict_arima_train
+summary(market_predict_arima_train)
+```
+
+
+### Apply the ARIMA algorithm on Test set 
+
+```{r}
+
+market_pred_stockarima_test <- auto.arima(test_stock_arimats)
+summary(market_pred_stockarima_test)
+```
+d=1 then we have yearly trend 
+
+```{r}
+# Now let's take the numbers from the auto.arima and understand it more ...
+# c is calculated as the mean with difference from the first coefficient (for t-1, from "yesterday")
+c_stock = 0.7469 * (1-(-0.8363)) 
+c_stock  
+#e(t) is white noise with a standard deviation of sqrt(sd) 
+e_t_stock = sqrt(2209) 
+e_t_stock 
+
+# The following equation is the interpretation from auto.arima function 
+# y_stock(t) = c_stock + 0.7469y(t-1) - 0.8363e(t-1) + e(t_stock) 
+# y_stock(t) = 1.3715 + 0.7469y(t-1) - 0.8363e(t-1) + 47
+# y_stock(t) = 48.3715 + 0.7469y(t-1) - 0.8363e(t-1) 
+```
+
+### Plot the ARIMA Prediction Test Model 
+
+```{r}
+plot(market_pred_stockarima_test)
+
+```
+We understood stock dataset and sensed the market performance and how the moving average market can provide more insight to DJIA perofrmance. To add another independent variable that may/may not impact on predicting market performance, this project shall analyze sentiments of texts from Reddit News Headlines. Hence, a new data file is created having the Top1 to Top25 texts with output variable Label. Based on DJIA Close price from yesterday, when it is up or the same (compared from t-1 to t), Label = 1 and when DJIA Close was down, Label = 0. This data file is called Combined data. 
+
+```{r}
+
+library(forecast)
+futureVal <- forecast(market_pred_stockarima_test)
+futureVal
+```
+
+```{r}
+plot(futureVal)
+```
+
+
+# Evaluate the Model 
+```{r}
+plot(market_pred_stockarima_test$residuals)
+```
+
+```{r}
+plot(market_pred_stockarima_test$fitted)
+```
+
+```{r}
+plot(market_pred_stockarima_test$aicc)
+```
+

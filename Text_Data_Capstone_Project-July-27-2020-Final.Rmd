@@ -1,0 +1,1550 @@
+---
+title: "Text Data"
+author: "Mayada Kazem"
+date: "26/07/2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
+#install.packages("ISwR")
+#install.packages("ggplot2") 
+#install.packages("quanteda")
+#install.packages("dplyr")
+#install.packages("SnowballC")
+#install.packages("NLP")
+#install.packages("tm")
+#install.packages("text2vec") 
+#install.packages("textstem")
+#install.packages("SimilaR")
+#install.packages("SentimentAnalysis")
+#install.packages("class")
+#install.packages("gmodels")
+#install.packages("forecast")
+#install.packages("tidytext")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("PerformanceAnalytics")
+
+```
+
+
+```{r}
+rm(list=ls())
+library(ISwR)
+library(zoo) 
+library(PerformanceAnalytics) 
+library(ggplot2) 
+library(dplyr)
+library(SnowballC)
+library(NLP)
+library(tm)
+library(text2vec) 
+library(textstem)
+library(SimilaR)
+library(SentimentAnalysis)
+library(class)
+library(gmodels)
+library(forecast)
+library(tidytext)
+library(tidyr)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(quanteda)
+```
+
+
+# TEXT DATA
+
+To proceed to Sentiment Analysis and its impact on DJIA stock prices, let's read combined data file first and see the Class attribute (Label) 
+
+```{r}
+project_data <- read.csv("C:/Users/WATERTON/Desktop/Mayada/Combined_News_DJIA.csv", header = TRUE, stringsAsFactors = FALSE)
+head(project_data)
+
+
+```
+
+Label is class variable and Top1 to Top25 are character columns not ready for sentiment analysis. Let's see the output variable 
+
+```{r}
+# Plotting pie chart for output variable (Label): 
+
+lbl_table <- table(project_data$Label)
+lbls <- paste(names(lbl_table),",", lbl_table, sep="")
+pie(lbl_table, labels = lbls,
+   main="Pie Chart of Class Attribute Label")
+```
+
+## Check for missing values
+
+```{r}
+# There are empty cells in project_data dataframe and we need to write NA in that cell to identify easily 
+project_data[project_data==""] <- NA
+
+sum(is.na(project_data$Date) == TRUE)
+length(project_data$Date)
+sum(is.na(project_data$Label) == TRUE)
+length(project_data$Label)
+sum(is.na(project_data$Top1) == TRUE)
+length(project_data$Top1)
+sum(is.na(project_data$Top2) == TRUE)
+length(project_data$Top2)
+sum(is.na(project_data$Top3) == TRUE)
+length(project_data$Top3)
+sum(is.na(project_data$Top4) == TRUE)
+length(project_data$Top4)
+sum(is.na(project_data$Top5) == TRUE)
+length(project_data$Top5)
+sum(is.na(project_data$Top6) == TRUE)
+length(project_data$Top6)
+sum(is.na(project_data$Top7) == TRUE)
+length(project_data$Top7)
+sum(is.na(project_data$Top8) == TRUE)
+length(project_data$Top8)
+sum(is.na(project_data$Top9) == TRUE)
+length(project_data$Top9)
+sum(is.na(project_data$Top10) == TRUE)
+length(project_data$Top10)
+sum(is.na(project_data$Top11) == TRUE)
+length(project_data$Top11)
+sum(is.na(project_data$Top12) == TRUE)
+length(project_data$Top12)
+sum(is.na(project_data$Top13) == TRUE)
+length(project_data$Top13)
+sum(is.na(project_data$Top14) == TRUE)
+length(project_data$Top14)
+sum(is.na(project_data$Top15) == TRUE)
+length(project_data$Top15)
+sum(is.na(project_data$Top16) == TRUE)
+length(project_data$Top16)
+sum(is.na(project_data$Top17) == TRUE)
+length(project_data$Top17)
+sum(is.na(project_data$Top18) == TRUE)
+length(project_data$Top18)
+sum(is.na(project_data$Top19) == TRUE)
+length(project_data$Top19)
+sum(is.na(project_data$Top20) == TRUE)
+length(project_data$Top20)
+sum(is.na(project_data$Top21) == TRUE)
+length(project_data$Top21)
+sum(is.na(project_data$Top22) == TRUE)
+length(project_data$Top22)
+sum(is.na(project_data$Top23) == TRUE)
+length(project_data$Top23)
+sum(is.na(project_data$Top24) == TRUE)
+length(project_data$Top24)
+sum(is.na(project_data$Top25) == TRUE)
+length(project_data$Top25)
+
+```
+Top23 has one missed data identified, Top24 and Top25 has three data items (or rows) identified. I choose to delete those columns and move forward with dataframe of Date, Label, Top1, Top2 ... to Top22 columns.
+
+Top1 to Top 22 columns are many columns to analyze its sentiment and try to predict DJIA stock market performnace from. Hence, the intent is to reduce analysis as much as we can while keeping the performance to its optimum. 
+
+I sense that forward dimensionality reduction is the best choice. Adding one column after anothe til we reach optimum model performance. 
+
+#1- Unigram Univariate Sentiment Analysis 
+
+## Text Data Preparation
+
+Columns from Top1, Top2 .... to Top22 have Reddit headlines' text to analyze. First, read Top1 column only and consider it for sentiment analysis; i.e., without the other 21 headline columns. let's clean it
+
+### Top1 Tokenization 
+Delete Numbers 
+```{r}
+new_Top1 <- gsub('[[:digit:]]+', '', project_data$Top1)
+head(new_Top1) 
+```
+
+Delete punctuation marks
+```{r}
+new_Top1 <- gsub(pattern="[[:punct:]]",  new_Top1, replacement="") 
+head(new_Top1)
+```
+
+Delete the small letter (b) that's at the begining of Top1 that's created after punctuation and convert all letters to small
+
+``` {r}
+Top1_updt <- sub(pattern="b",  tolower(new_Top1), replacement="")
+head(Top1_updt)
+
+```
+
+Create a new data frame for text analysis with three columns only; Date, Top1 (after cleaned), Lable with 1989 obsevations 
+
+```{r}
+project_updt <- data.frame(project_data$Date, Top1_updt, project_data$Label)
+
+head (project_updt)
+
+```
+
+### Measure TF and TF-IDF  
+In Text Analysis, to know how important a word is to measure the word frequency  
+
+```{r}
+# Convert df to tidy text dataset
+project_updt$Top1_updt <- as.character(project_updt$Top1_updt)
+project_uigramdf <- data.frame(project_updt$Top1_updt, stringsAsFactors=FALSE)
+head(project_uigramdf)
+Top1_unigram <- project_uigramdf %>% unnest_tokens(word, project_updt.Top1_updt) 
+
+head(Top1_unigram) 
+```
+Many words are not interesting such as: to, as, .. etc 
+```{r}
+Top1_unigram <- Top1_unigram %>% 
+  anti_join(stop_words)
+head(Top1_unigram)   
+```
+Count the words to find the most common words mentioned in Reddit Top1 Headline 
+```{r}
+Top1_uigram_count <- Top1_unigram %>% 
+    count(word, sort = TRUE)
+head(Top1_uigram_count) 
+```
+
+Create Visualization of the most common words in Reddit Top1 Headline 
+```{r} 
+library(ggplot2) 
+Top1_uigram_count %>%
+count(word, sort = TRUE) %>%
+  filter(n > 50) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()  
+
+```
+
+How about we measure the TF-IDF of each word in Reddit Top1 Headline
+```{r}
+# First, cobmine all words in one column in a new df 
+Top1_doc1 <- paste(project_uigramdf$project_updt.Top1_updt, collapse = " ")
+Top1_doc1 <- as.character(Top1_doc1)
+Top1_df1 <- data.frame(Top1_doc1) 
+head(Top1_df1)
+```
+
+ Now let's measure TF-IDF
+```{r}
+
+Top1_uigram_tf_idf <- Top1_unigram %>% 
+  count(Top1_df1$Top1_doc1, word) %>%
+  bind_tf_idf(word, Top1_df1$Top1_doc1, n) %>%
+  arrange(desc(tf_idf))
+ 
+head(Top1_uigram_tf_idf)
+ 
+
+```
+
+Top 10 words with highest TF-IDF 
+```{r}
+# Order descendingly by n and choose top10 
+
+Top1_unigram_top10 <- Top1_uigram_tf_idf %>% 
+   select(word, n) %>% arrange(desc(n)) %>% top_n (10) 
+Top1_unigram_top10
+```
+Let's plot the top10 of Reddit Headlines of the most TF-IDF 
+
+```{r}
+library(ggplot2) 
+ggplot(Top1_unigram_top10, aes(x=word, y=n, fill=word))+
+  geom_bar(stat="identity")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylab("TF-IDF top 10 of Reddit Headlines Top1")+
+  xlab("")+
+  guides(fill=FALSE) 
+```
+## Sentiment Analysis 
+
+Reading Top1 Column only
+```{r}
+# Top1_updt col 
+doc <- 0
+for (i in c(1:1989)) {doc[i] <- as.character(project_updt$Top1_updt[i])}
+doc.list <- as.list(doc[1:1989])
+N.docs <- length(doc.list)
+names(doc.list) <- paste0("Doc", c(1:N.docs))
+
+```
+Change format of texts to prepare data for analysis - create my.corpus 
+```{r}
+# Create Unigram 
+
+my.docs <- VectorSource(c(doc.list))
+my.docs$Names <- c(names(doc.list))
+my.corpus <- Corpus(my.docs)
+my.corpus 
+```
+Top1 headline is almost clean - needs to unite the tense of words only (lemmatization) 
+
+```{r}
+#Hint: use getTransformations() function in tm Package
+#https://cran.r-project.org/web/packages/tm/tm.pdf
+getTransformations()
+
+# Removing stop words    
+my.corpus <- tm_map(my.corpus, removeWords, stopwords("English"))
+```
+
+Remove irrelevant to project's research questions' words 
+```{r}
+wordsToRemove <- c("(tomorrow)","(yesterday)","(today)","(morning)", "(tonight)","(now)")
+my.corpus <- tm_map(my.corpus, removeWords, words=wordsToRemove)
+
+```
+
+Lemmatization
+```{r}
+my.corpus <- lemmatize_words(my.corpus)
+my.corpus
+```
+
+### Top1 - Univariate Analysis  
+
+```{r}
+# Top1_updt unigram 
+sentiment <- analyzeSentiment(my.corpus)
+head(sentiment) 
+```
+Henry’s Financial dictionary (Henry 2008) and Loughran-McDonald Financial dictionary (Loughran and McDonald 2011) are mostly recommended for financial analysis. However, I'll take all dictionaries values, average them and consider RatioUncertaintyLM in our calculations as well 
+
+```{r}
+# Averaging the senses of all available four dictionaries to get a sentiment value to each sentence/row 
+
+Top1_sent <- (sentiment$SentimentGI + sentiment$SentimentHE+ sentiment$SentimentLM + sentiment$RatioUncertaintyLM + sentiment$SentimentQDAP ) / 4
+
+```
+Save Query sentiment analysis seperately 
+
+```{r}
+
+# Now we can add the sentiment values and create new dataframe 
+project_df1 <- data.frame(project_updt$project_data.Date, Top1_sent, project_updt$project_data.Label)
+
+head(project_df1) 
+str(project_df1)
+
+```
+
+# Experimental Design 
+## Data Split 
+
+Split project_df1 dataframe to taining and testing data sets (70% to 30%)
+
+```{r}
+#Divide the data set into 2 portions in the ratio of 70: 30 for the training and testing datasets respectively taking it in series by date without random selection 
+n = nrow(project_df1)
+n
+train_Top1 <- round(0.70389 * (n))
+train_Top1
+test_Top1 <- n - train_Top1
+test_Top1
+
+train_set_Top1 <- project_df1[1:train_Top1,]
+test_set_Top1  <- project_df1[(train_Top1+1):n,]
+
+```
+For testing and making sure our split is right: 
+
+```{r}
+#summary(train_index_Top1)
+summary(train_set_Top1)
+summary(test_set_Top1) 
+nrow(train_set_Top1)
+nrow(test_set_Top1)
+
+# let's have a look at the data in the testing set: 
+head(test_set_Top1)
+```
+
+```{r}
+# Plot a curve of Testing set before prediction with Top1 sentiment on x-axis and Output Class on y-axis
+plot(test_set_Top1$Top1_sent, test_set_Top1$project_updt.project_data.Label, main = "Plot of Test Set Before Prediction",  xlab="Sentiment Analysis Score",ylab="Stock Market Up/Down") 
+```
+
+
+
+# Modeling 
+## Linear Regression Model 
+Stock Market Prediction using DJIA prices output variable Label
+
+Since Label column is logical (has 0/1 values), then first we shall perform logistic regression using glm. let's train the prediction model: 
+
+```{r}
+# H0, Null Hypothesis when the market prediction performance matches the output variable Label in performnace 
+#H1, There is a difference between market prediction performance and last year trend analysis concluded from analyzing sentimentally Reddit world news  
+
+market_model1_train <- glm (formula = project_updt.project_data.Label ~ Top1_sent, data = train_set_Top1, family = "binomial")  
+
+```
+See the training data set 
+
+```{r}
+#nrow(market_model1_train) 
+summary(market_model1_train)
+str(market_model1_train)
+
+```
+
+Now it's time to apply our prediction model on test set
+
+```{r}
+library(forecast)
+market_model1_test <- predict(market_model1_train, test_set_Top1, type="response")
+
+summary(market_model1_test)
+str(market_model1_test)
+
+```
+Traing set has negative and positive numbers; look at miminum and maximum values. But the testing dataset doesn't have. All positive values.  
+
+```{r}
+# If we want to see the testing dataset  
+head(market_model1_test) 
+
+# plot a curve based on prediction from logistic regression model. Plot with Top1 sentiment on x-axis and Output Predicted on y-axis
+plot(test_set_Top1$Top1_sent, market_model1_test, main = "Plot of Market Performance for Test Set After Prediction",  xlab="Sentiment Analysis Score",ylab="Predicted Performance") 
+
+```
+
+# Performance Evaluation
+
+```{r}
+# We shall replace any value of Top1 sentiment that is greater  than 0.5 (i.e., 50%) to 1 (or Positive), otherwise, it is zero (or Negative) 
+predicted_Top1 <- ifelse(market_model1_test>0.50, 1, 0)   
+#str(predicted_Top1)
+#cbind(test_set_Top1, predicted_Top1)
+str(test_set_Top1)
+head(predicted_Top1)
+
+#test_set_Top1$project_updt.project_data.Label
+
+```
+
+## Confusion Matrix
+```{r}
+# Building the Confusion Matrix
+confusionMatrix_Top1 <- table(Actuals = test_set_Top1$project_updt.project_data.Label, Predicted = predicted_Top1)
+
+Actuals <- test_set_Top1$project_updt.project_data.Label
+Predicted <- predicted_Top1
+test1 <- CrossTable(x=Actuals, y=Predicted, prop.chisq=FALSE, prop.t=FALSE,prop.c= FALSE,prop.r= FALSE)
+
+test1 
+```
+We have many zeros that the model didn't predict.  
+
+
+# Performance Measures 
+
+After predicting the model and building the cross table, let's measure the testing model accuracy, recall, precision, specificity, and the F-score  
+
+```{r}
+# From the above confusion matrix, we hve the following values: 
+FP = 277
+TP = 312
+TN = 0
+FN = 0
+
+```
+
+Calculate Accuracy 
+```{r}
+# Overall predicted accuracy of the model; calculated as (TP+TN)/(TP+TN+FP+FN)
+#Acc = 312/nrow(test_set_Top1)
+Acc = (TP+TN)/(TP+TN+FP+FN)
+Acc
+```
+Accuracy is almost %53 (rounded to one digit)  
+
+
+Calculate Recall or TPR true Positive Rate; also called Sensitivity 
+```{r}
+#Recall can be calculated as TP/(TP+FN) or 1-FN rate   
+Rec = TP/(TP+FN)
+Rec
+```
+ Recall is 100%; i.e., all positive values are perfectly predicted. Whenever the market is the same or going up, the model is predicting it. 
+
+Calculate Specificity or also called TNR True Negative Rate 
+```{r}
+# How many negative values out of all negative values are predicted right 
+TNR = TN/(TN+FP)
+TNR
+```
+Yep, no negative values has been predicted. This indicates this model is never predicting the market when it goes down. 
+
+
+ Calculate Precision, how many values out of all the positive values are actually positive  
+```{r}
+#Precision = TP/(TP+FP)
+Pre = TP/(TP+FP)
+Pre  
+```
+53% is the precision. This value is low as it indicates, there's 47% other positive values are not predicted by the model.
+
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# The higher the value, the better the model 
+Fscore = 2*Pre*Rec/(Pre+Rec) 
+Fscore 
+```
+Almost 70% F-score 
+
+
+In an attempt to improve the mode, let's try KNN regression.
+
+## KNN Model 
+```{r}
+# Divide the data set into 2 portions in the ratio of 70: 30 for the training and testing datasets respectively taking it in series by date without random selection 
+
+#str(project_df1)
+n = nrow(project_df1)
+n
+train_Top1 <- round(0.70389 * (n))
+train_Top1
+test_Top1 <- n - train_Top1
+test_Top1
+
+train_set_Top1 <- project_df1[1:train_Top1,]
+test_set_Top1  <- project_df1[(train_Top1+1):n,]
+head(train_set_Top1)
+class_train1 <- train_set_Top1[,3] 
+class_test1 <- test_set_Top1[,3] 
+head(class_train1)
+```
+Calculate K theoritically 
+
+```{r}
+# number of observations (n) = 1989 
+n= 1989 
+k = round(sqrt(n))
+k 
+```
+
+Predict KNN model on Testing set 
+```{r}
+# Using the theoritical optimum value of K first
+market_prediction1_knn <- knn(train = train_set_Top1[2], test = test_set_Top1[2],cl = class_train1, k=5) 
+
+market_prediction1_knn
+```
+Let's see how this model is performing. Is it better than the regression modelling? 
+
+### Performance Measurement - Confudion Matrix 
+```{r}
+# Prepare the table x,y 
+Actuals_KNN1 <- class_test1
+Predcited_KNN1 <- market_prediction1_knn
+
+ConfuMat_pred1_knn <- table(Actuals_KNN1=class_test1, Predcited_KNN1=market_prediction1_knn)
+
+ConfuMat_pred1_knn 
+
+# CrossTable(x=Actuals_KNN1, y=Predcited_KNN1, prop.chisq=FALSE)
+```
+From the first glance, it looks like the model is better as The model is predicting all zeros and ones but we still should measure all the model metrics to understand how it is performing. let's see... 
+
+
+I tried many values of K starting with the theoritical value for K as follows: 
+
+Run KNN model when K has different values: 
+k = 2 , Acc = 48.7% , FP = 175
+k = 4 , Acc = 48.2% , FP = 168
+k = 5 , Acc = 50.7% , FP = 168
+k = 8 , Acc = 46.6% , FP = 170
+k = 10 , Acc = 48.3%, FP = 170
+k = 20 , Acc = 46.3%, FP = 175
+k = 30 , Acc = 48% ,  FP = 189
+k = 40 , Acc = 46.1% ,FP = 184
+k = 45 , Acc = 48.4% ,FP = 185
+k = 47 , Acc = 48.7%, FP = 182
+
+As listed above, I'll try measuring all model performance measures for K=5, 10, and 45. 
+
+```{r}
+# For K = 45, Predcited_KNN1
+#Actuals_KNN1   0   1
+#           0  66 211
+#           1  74 238
+
+TN_k45 = 66
+TP_k45 = 238
+FP_k45 = 211
+FN_k45 = 74
+```
+
+Calculate Accuracy 
+```{r}
+# Overall predicted accuracy of the model; calculated as (TP+TN)/(TP+TN+FP+FN)
+#Acc = 312/nrow(test_set_Top1)
+Acc_k45 = (TP_k45+TN_k45)/(TP_k45+TN_k45+FP_k45+FN_k45)
+Acc_k45
+```
+Accuracy is almost %53 (rounded to one digit)  
+
+
+Calculate Recall or TPR true Positive Rate; also called Sensitivity 
+```{r}
+#Recall can be calculated as TP/(TP+FN) or 1-FN rate   
+Rec_k45 = TP_k45/(TP_k45+FN_k45)
+Rec_k45
+```
+ Recall is 76.3%; i.e., 73% of times the model is predicting when the DJIA market price is the same or going up. Here compared to regression model is not an improvement as it was 100%. 
+
+Calculate Specificity or called TNR True Negative Rate 
+```{r}
+# How many negative values out of all negative values are predicted right 
+TNR_k45 = TN_k45/(TN_k45+FP_k45)
+TNR_k45
+```
+24% of negative values the model has predicted. I say this is an improvement to the previous model. 
+
+ 
+ Calculate Precision, how many values out of all the positive values are actually positive  
+```{r}
+#Precision = TP/(TP+FP)
+Pre_k45 = TP_k45/(TP_k45+FP_k45)
+Pre_k45  
+```
+53% is the precision. This value is the same as the regression model. i.e., the compromise between recall and precision. here for regression model and KNN, it is the same. 
+
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# The higher the value, the better the model 
+Fscore_k45 = 2*Pre_k45*Rec_k45/(Pre_k45+Rec_k45) 
+Fscore_k45 
+```
+F-score is rounded to 63%. So far, I see that this model is better. Although the F-score is less (as it was 70% for the regression model) but we need the model to predict when the market goes up (or prices stays the same) and when it goes down to build confidence with our customers that we are advising them right. We can't advice when it goes up only; we may lose their trus and belief in the model/system. 
+
+Let's repeat the above steps when K=10
+
+```{r}
+# For K = 10, Predcited_KNN1
+#Actuals_KNN1   0   1
+#           0  94 183
+#           1 113 199
+
+TN_k10 = 94
+TP_k10 = 199
+FP_k10 = 183
+FN_k10 = 113
+```
+
+Calculate Accuracy 
+```{r}
+# Overall predicted accuracy of the model; calculated as (TP+TN)/(TP+TN+FP+FN)
+#Acc = 312/nrow(test_set_Top1)
+Acc_k10 = (TP_k10+TN_k10)/(TP_k10+TN_k10+FP_k10+FN_k10)
+Acc_k10
+```
+Accuracy is almost %50 (rounded to one digit)  
+
+
+Calculate Recall or TPR true Positive Rate; also called Sensitivity 
+```{r}
+#Recall can be calculated as TP/(TP+FN) or 1-FN rate   
+Rec_k10 = TP_k10/(TP_k10+FN_k10)
+Rec_k10
+```
+ Recall is 64%; i.e., 64% of times the model is predicting when the DJIA market price is the same or going up. Let's compare later  
+
+Calculate Specificity or called TNR True Negative Rate 
+```{r}
+# How many negative values out of all negative values are predicted right 
+TNR_k10 = TN_k10/(TN_k10+FP_k10)
+TNR_k10
+```
+34% of negative values the model has predicted. I say this is an improvement to the previous model when k=45. 
+
+ 
+ Calculate Precision, how many values out of all the positive values are actually positive  
+```{r}
+#Precision = TP/(TP+FP)
+Pre_k10 = TP_k10/(TP_k10+FP_k10)
+Pre_k10  
+```
+51% is the precision. This value is the same as the regression model. i.e., the compromise between recall and precision. 
+
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# The higher the value, the better the model 
+Fscore_k10 = 2*Pre_k10*Rec_k10/(Pre_k10+Rec_k10) 
+Fscore_k10 
+```
+F-score is rounded to 57.5%. It is going down; lower than for k=45.
+
+K = 5
+
+```{r}
+# For K = 5, Predcited_KNN1
+#Actuals_KNN1   0   1
+#           0  91 186
+#           1 106 206
+
+TN_k5 = 91
+TP_k5 = 206
+FP_k5 = 186
+FN_k5 = 106
+```
+
+Calculate Accuracy 
+```{r}
+# Overall predicted accuracy of the model; calculated as (TP+TN)/(TP+TN+FP+FN)
+#Acc = 312/nrow(test_set_Top1)
+Acc_k5 = (TP_k5+TN_k5)/(TP_k5+TN_k5+FP_k5+FN_k5)
+Acc_k5
+```
+Accuracy is almost %50.5   
+
+
+Calculate Recall or TPR true Positive Rate; also called Sensitivity 
+```{r}
+#Recall can be calculated as TP/(TP+FN) or 1-FN rate   
+Rec_k5 = TP_k5/(TP_k5+FN_k5)
+Rec_k5
+```
+ Recall is 66%; i.e., 66% of times the model is predicting when the DJIA market price is the same or going up. Here compared to regression model is not an improvement as it was 100%. 
+
+Calculate Specificity or called TNR True Negative Rate 
+```{r}
+# How many negative values out of all negative values are predicted right 
+TNR_k5 = TN_k5/(TN_k5+FP_k5)
+TNR_k5
+```
+33% of negative values the model has predicted. I say this is an improvement to the previous model. 
+
+ 
+ Calculate Precision, how many values out of all the positive values are actually positive  
+```{r}
+#Precision = TP/(TP+FP)
+Pre_k5 = TP_k5/(TP_k5+FP_k5)
+Pre_k5  
+```
+almost 53% is the precision. This value is an interesting one. So far, for all models have Precision the same; i.e., the percentage of Predicting the number of poitive values out of all actual positive values is the same.  
+
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# The higher the value, the better the model 
+Fscore_k5 = 2*Pre_k5*Rec_k5/(Pre_k5+Rec_k5) 
+Fscore_k5 
+```
+F-score 58.5% is the compromise between recall and precision. F-score for k=45 is the best. 
+
+I'll proceed to ARIMA Modelling searching for more model improvements.Especially this data set is a time series data set when ARIMA 'should" perform better. 
+
+
+## ARIMA Model  
+Prepare dataframe for time series prediction. My dataframe is project_df1 (has Date column), use the zoo object (time series object) to perform prediction  
+
+```{r}
+# Since auto.arima handles only univariate dataframe, then create it:
+head(project_df1)
+project_df1$project_updt.project_data.Date <- as.Date(project_df1$project_updt.project_data.Date)
+project_df1_zoo <- zoo(project_df1, order.by = project_df1$project_updt.project_data.Date)
+head(project_df1_zoo)
+project_arima <- data.frame(project_df1_zoo$Top1_sent) 
+head(project_arima)
+
+```
+
+Then change zoo object to ts for better auto.arima performance as this function applies to regular time series dataset   
+
+```{r}
+project_arima1_ts <- as.ts(project_arima)
+head(project_arima1_ts)
+
+```
+
+!Check for seasonality to proceed to auto ARIMA. It didn't work :(
+```{r}
+#check_arima_df <- decompose(project_arima1_ts)
+```
+
+### Data Split
+Prepare data frame for ARIMA Performance Analytics 
+
+```{r}
+# Split ts.dataframe to start prediction 
+
+#n = nrow(project_arima1_ts)    # For testing; same no. 1989
+#train_Top1 <- round(0.70389 * (n)) 
+#test_Top1 <- n - train_Top1
+
+train_set_arima1ts <- project_arima1_ts[1:train_Top1,]
+test_set_arima1ts  <- project_arima1_ts[(train_Top1+1):n,]
+
+```
+
+Train the ARIMA prediction model 
+```{r}
+library(forecast)
+market_predict_arima1ts_train <- auto.arima(train_set_arima1ts, trace = TRUE) 
+
+market_predict_arima1ts_train
+summary(market_predict_arima1ts_train)
+```
+ARIMA(0,0,1)  
+
+
+```{r}
+# Now let's take the numbers from the auto.arima and understand it more ...
+# c is calculated as the mean with difference from the first coefficient (for t-1, from "yesterday")
+c = 131.0189 * (1-(-0.9984)) 
+c  
+#e(t) is white noise with a standard deviation of SQRT(7914) 
+e_t = sqrt(7929) 
+e_t
+
+# The following equation is the interpretation from auto.arima function 
+# y(t) = c - 0.9984y(t-1) - 0.95y(t-2) + 1.0211e(t-1) + 0.9747e(t-2) + e(t) 
+
+```
+d=0; i.e., the long term forecast will go to the mean of the data. Then it tends towards 89/90. 
+
+
+Apply the ARIMA algorithm on Test set 
+
+```{r}
+market_pred_arima1_test <- auto.arima(test_set_arima1ts)
+market_pred_arima1_test
+```
+
+```{r}
+library(forecast)
+market_predict_arima1ts_test <- forecast(market_pred_arima1_test)
+summary(market_predict_arima1ts_test)
+```
+
+```{r}
+market_predict_arima1ts_test
+```
+
+```{r}
+
+summary(market_predict_arima1ts_test)
+
+```
+
+Measure p-value of the model 
+```{r}
+library(lmtest)
+
+coeftest(market_pred_arima1_test)
+
+```
+
+
+Plot the ARIMA Prediction Model 
+
+```{r}
+plot(market_predict_arima1ts_test)
+
+```
+
+
+```{r}
+library(forecast)
+market_predict_arima1ts_test %>% forecast(h=8) %>% autoplot(include=80)
+```
+
+
+
+# 2- Unigram Multi-Variate Sentiment Analysis
+When each variable is a unigram - Include Top1 and Top2 columns 
+
+## Top2 Tokenization 
+Columns from Top1, Top2 .... to Top22 have Reddit headlines' text to analyze. Now we are analyzing Top2 taking one word at a time to analyze
+
+### Remove Numbers from Top2
+```{r}
+new_Top2 <- gsub('[[:digit:]]+', '', project_data$Top2)
+head(new_Top2) 
+```
+
+
+### Remove Punctuation Marks from Top2
+```{r}
+new_Top2 <- gsub(pattern="[[:punct:]]",  project_data$Top2, replacement="") 
+head(new_Top2) 
+```
+
+```{r}
+# Delete the small letter (b) that's at the begining of Top1 that's created after punctuation and convert all letters to small
+
+Top2_updt <- sub(pattern="b",  tolower(new_Top2), replacement="")
+head(Top2_updt)
+
+# Add to the df created for sentiment analysis Top2 column after cleaning the data. Now df will have four columns  
+
+project_updt <- data.frame(project_data$Date, Top1_updt, Top2_updt, project_data$Label)
+head (project_updt)
+
+```
+
+### Measure TF and TF-IDF of Top2 column  
+ 
+
+```{r}
+# Convert df to tidy text dataset; i.e., create a data frame of one column (the text column) 
+project_updt$Top2_updt <- as.character(project_updt$Top2_updt)
+project_top2df <- data.frame(project_updt$Top2_updt, stringsAsFactors=FALSE)
+head(project_top2df)
+
+Top2_unigram <- project_top2df %>% unnest_tokens(word, project_updt.Top2_updt) 
+
+head(Top2_unigram) 
+```
+
+Many words are not interesting such as: to, as, .. etc 
+```{r}
+Top2_unigram <- Top2_unigram %>% 
+  anti_join(stop_words)
+head(Top2_unigram)  
+```
+Count the words to find the most common words mentioned in the second Reddit Headline (Top2) 
+```{r}
+Top2_uigram_count <- Top2_unigram %>% 
+    count(word, sort = TRUE)
+head(Top2_uigram_count) 
+```
+
+Create Visualization of the most common words in Reddit Top2 Headline 
+```{r} 
+library(ggplot2) 
+
+Top2_uigram_count %>%
+count(word, sort = TRUE) %>%
+  filter(n > 50) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()  
+
+```
+
+How about we measure the TF-IDF of each word in Reddit Top2 Headline?
+```{r}
+# First, cobmine all words in one column in a new df 
+Top2_doc2 <- paste(project_top2df$project_updt.Top2_updt, collapse = " ")
+#project_top2df
+Top2_doc2 <- as.character(Top2_doc2)
+Top2_df2 <- data.frame(Top2_doc2) 
+head(Top2_df2)
+```
+
+ Measure TF-IDF
+```{r}
+Top2_uigram_tf_idf <- Top2_unigram %>% 
+  count(Top2_df2$Top2_doc2, word) %>%
+  bind_tf_idf(word, Top2_df2$Top2_doc2, n) %>%
+  arrange(desc(tf_idf))
+
+head(Top2_uigram_tf_idf)
+
+```
+
+Top 10 words with highest TF-IDF 
+```{r}
+# Order descendingly by n and choose top10 
+
+Top2_unigram_top10 <- Top2_uigram_tf_idf %>% 
+   select(word, n) %>% arrange(desc(n)) %>% top_n (10) 
+Top2_unigram_top10
+```
+Let's plot the top10 of Top2 Reddit Headlines with the most TF-IDF 
+
+```{r}
+library(ggplot2) 
+
+ggplot(Top2_unigram_top10, aes(x=word, y=n, fill=word))+
+  geom_bar(stat="identity")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylab("TF-IDF top 10 of Reddit Headlines Top2")+
+  xlab("")+
+  guides(fill=FALSE) 
+```
+
+## Create Top2 Unigram
+Preparing Top2 column 
+```{r}
+# Top2_updt col 
+doc2 <- 0
+for (i in c(1:1989)) {doc2[i] <- as.character(project_updt$Top2_updt[i])}
+doc2.list <- as.list(doc2[1:1989])
+N.docs2 <- length(doc2.list)
+names(doc2.list) <- paste0("Doc", c(1:N.docs2))
+```
+
+###Create my corpus from Top2 column 
+
+```{r}
+
+my.docs2 <- VectorSource(c(doc2.list))
+my.docs2$Names <- c(names(doc2.list))
+myCorpus2 <- Corpus(my.docs2)
+myCorpus2
+
+```
+
+### Removing stop words
+
+```{r}
+#getTransformations()
+
+my.corpus2 <- tm_map(myCorpus2, removeWords, stopwords("English"))
+```
+### Remove irrelevant to project's research questions' words 
+
+```{r}
+wordsToRemove <- c("(14yearold)","(13yearold)","(tomorrow)","(yesterday)","(today)","(morning)", "(tonight)","(now)")
+my.corpus2 <- tm_map(my.corpus2, removeWords, words=wordsToRemove)
+```
+
+### Lemmatization 
+
+```{r}
+my.corpus2 <- lemmatize_words(my.corpus2)
+my.corpus2
+```
+### Create a uni-gram Term Document Matrix for Top2  
+
+```{r}
+# unigram with Top2_updt
+term.doc.matrix2 <- TermDocumentMatrix(my.corpus2)
+
+inspect(term.doc.matrix2[1:10,1:10])
+```
+
+Converting the generated TDM into a matrix 
+
+```{r}
+term.doc.matrix2 <- as.matrix(term.doc.matrix2)
+head(term.doc.matrix2)
+
+```
+
+# Compute the TF-IDF from the term frequency vector
+
+```{r}
+
+get.tf.idf.weights2 <- function(tf.vec2) { 
+  n.docs.2 <- length(tf.vec2)
+  doc.frequency.2 <- length(tf.vec2[tf.vec2 > 0]) 
+  weights2 <- rep(0, length(tf.vec2))
+  relative.frequency.2 <- tf.vec2[tf.vec2 > 0] / sum(tf.vec2[tf.vec2 > 0]) 
+#TF(ij) * IDF(i)
+  weights2[tf.vec2 > 0]<-  (1 + log(tf.vec2[tf.vec2 > 0])) * log(1 + n.docs.2/doc.frequency.2)
+  return(weights2)
+}
+
+```
+
+To rank the top 10 similar words from Top2 Column based on "Query", compute cosine similarity and produce heat map
+
+```{r}
+# Prepare the matrix to perform calculation 
+
+tfidf.matrix2 <- t(apply(term.doc.matrix2, 1,
+                        FUN = function(row) {get.tf.idf.weights2(row)})) 
+colnames(tfidf.matrix2) <- my.docs2$Names
+
+head(tfidf.matrix2)
+#dim(tfidf.matrix2)
+
+```
+
+Compute Similarity and produce heat map
+
+```{r}
+similarity.matrix2 <- sim2(t(tfidf.matrix2), method = 'cosine')
+heatmap(similarity.matrix2) 
+
+```
+
+Display the top 10 ranks similar to "Query"
+
+```{r}
+sort(similarity.matrix2, decreasing = TRUE)[1:10]
+ 
+```
+# Sentiment Analysis 
+```{r}
+# Top2_updt unigram 
+sentiment2 <- analyzeSentiment(my.corpus2)
+head(sentiment2) 
+
+```
+
+
+Averaging the senses of all available four dictionaries to get a sentiment value to each sentence/row 
+
+```{r}
+Top2_sent <- (sentiment2$SentimentGI + sentiment2$SentimentHE+ sentiment2$SentimentLM + sentiment2$RatioUncertaintyLM + sentiment2$SentimentQDAP ) / 4
+
+```
+Save Query sentiment analysis seperately 
+
+```{r}
+# Now we can add the sentiment values and create new dataframe 
+project_df1 <- data.frame(project_updt$project_data.Date, Top1_sent, Top2_sent, project_updt$project_data.Label)
+
+head(project_df1) 
+str(project_df1)
+```
+
+## Experimental Design for Multivariate Unigrams 
+### Data Split 
+
+Split project_updt dataframe to taining and testing data sets (70% to 30%)
+
+```{r}
+#Divide the data set into 2 portions in the ratio of 70: 30 for the training and testing datasets respectively taking it in series by date without random selection 
+#n = nrow(project_df1)
+#train_Top1 <- round(0.70389 * (n))
+#test_Top1 <- n - train_Top1
+
+train_set_Top2 <- project_df1[1:train_Top1,]
+test_set_Top2  <- project_df1[(train_Top1+1):n,]
+```
+For testing and making sure our split is right: 
+
+```{r}
+summary(train_set_Top2)
+summary(test_set_Top2) 
+nrow(train_set_Top2)
+nrow(test_set_Top2)
+# let's have a look at the data in the testing set: 
+head(test_set_Top2)
+```
+
+## Linear Regression Modeling on Multi-Variate Unigrams 
+
+```{r}
+market_model2_train <- glm (formula = project_updt.project_data.Label ~ Top1_sent + Top2_sent, data = train_set_Top2, family = "binomial")  
+summary(market_model2_train)
+```
+
+Now it's time to apply our prediction model on the testing set
+
+```{r}
+market_model2_test <- predict(market_model2_train, test_set_Top2, type="response")
+
+summary(market_model2_test)
+```
+
+
+```{r}
+# If we want to see the testing dataset  
+head(market_model2_test)
+```
+
+### Sentiment Analysis Evaluation
+
+```{r}
+# We shall replace any value of predicted Top2 sentiment that is greater  than 0.5 (i.e., 50%) to 1 (or Positive), otherwise, it is zero (or Negative) 
+predicted_Top2 <- ifelse(market_model2_test>0.50, 1, 0)   
+#cbind(test_set_Top2, predicted_Top2)
+head(predicted_Top2)
+
+```
+
+### Confusion Matrix
+```{r}
+# Building the Confusion Matrix
+confusionMatrix_Top2 <- table(actual = test_set_Top2$project_updt.project_data.Label, predicted = predicted_Top2)
+
+confusionMatrix_Top2
+```
+
+### Performance Measurement 
+
+After having the cross table numbers, calculating accuracy, precision, recall and f-score sound rediculous because they are EXACTLY the same numbers we had for univariate considering Top1 Only.
+
+
+## KNN Regression Model 
+```{r}
+#str(project_df1)
+#head(project_df1)
+set.seed(1)
+
+#n = nrow(project_df1)
+#train_Top1 <- round(0.70389 * (n))
+#test_Top1 <- n - train_Top1
+
+market_knn_predict2_train <- project_df1[1:train_Top1,]
+market_knn_predict2_test <- project_df1[(train_Top1+1):n,]
+
+class_train2 <- market_knn_predict2_train[,4] 
+class_test2 <- market_knn_predict2_test[,4] 
+
+str(class_train2)
+```
+
+
+Predict KNN model from Training set on Testing set for Top1 and Top2 reddit Headlines 
+```{r}
+# Theoritically, we should use k=45 
+market_prediction2_test <- knn(train = market_knn_predict2_train[2:3], test = market_knn_predict2_test[2:3],cl = class_train2, k=45) 
+
+```
+
+Plotting confusion matrix 
+```{r}
+CrossTable(x=class_test2, y=market_prediction2_test, prop.chisq=FALSE, prop.t = FALSE, prop.r = FALSE, prop.c = FALSE)
+```
+# For K = 5, Predcited_KNN1  # k=10 Predicted_KNN  k=30        k=45
+#Actuals_KNN1   0   1             0      1        0     1     0     1
+#           0  127 150          102     175      98    179    103   174
+#           1  125 187          114     198     114    198    106   206
+```{r}
+#TN_k5 = 127
+#TP_k5 = 187
+#FP_k5 = 150
+#FN_k5 = 125
+
+#TN_k10 = 102
+#TP_k10 = 198
+#FP_k10 = 175
+#FN_k10 = 114
+
+TN_k30 = 98
+TP_k30 = 198
+FP_k30 = 179
+FN_k30 = 114
+
+TN_k45 = 103
+TP_k45 = 206
+FP_k45 = 174
+FN_k45 = 106
+
+```
+
+Calculate Accuracy 
+```{r}
+# Overall predicted accuracy of the model; calculated as (TP+TN)/(TP+TN+FP+FN)
+
+Acc_k45 = (TP_k45+TN_k45)/(TP_k45+TN_k45+FP_k45+FN_k45)
+Acc_k45
+```
+k=5, Accuracy is almost %53 (rounded to one digit)  
+k=10, Accuracy is almost 51% 
+k=30, Accuracy is almost 50.5% 
+k=45, Accuracy is almost 52.5% 
+
+
+Calculate Recall or TPR true Positive Rate; also called Sensitivity 
+```{r}
+#Recall can be calculated as TP/(TP+FN) or 1-FN rate   
+Rec_k45 = TP_k45  /(TP_k45+FN_k45)
+Rec_k45
+```
+k=5, Recall is 60%
+k=10. Recall = 63.5%
+k=30, Recall = 63.5%
+k=45, Recall = 66% 
+
+
+Calculate Specificity or called TNR True Negative Rate 
+```{r}
+# How many negative values out of all negative values are predicted right 
+TNR_k45 = TN_k45/(TN_k45+FP_k45)
+TNR_k45
+```
+k=5, TNR = 49% of negative values the model has predicted. 
+k=10, TNR = 37%
+k=30, TNR = 35.5%
+k=45, TNR = 37% 
+
+ 
+Calculate Precision, how many values out of all the positive values are actually positive  
+```{r}
+#Precision = TP/(TP+FP)
+Pre_k45 = TP_k45/(TP_k45+FP_k45)
+Pre_k45 
+```
+k=5, Precision = 55.5%  
+k=10, Precision = 53% 
+k=30, Precision = 52.5%
+k=45, Precision = 54% 
+
+
+Calculate F-Score 
+Measure the harmonic mean of Precision and Recall (F-Score)
+```{r}
+# The higher the value, the better the model 
+Fscore_k45 = 2*Pre_k45*Rec_k45/(Pre_k45+Rec_k45) 
+Fscore_k45
+```
+k=5, F-score is rounded to 58%.  
+k=10, F-score is rounded to 58%.
+k=30, F-scor is rounded to 57.5%
+k=45, F=score is rounded to 60%; i.e., the compromise between recall and precision is the best when k=45. 
+
+## ARIMA Modeling - Multivariate Unigram 
+
+
+```{r}
+head(project_df1)
+project_df1$project_updt.project_data.Date <- as.Date(project_df1$project_updt.project_data.Date)
+project_df1_zoo <- zoo(project_df1, order.by = project_df1$project_updt.project_data.Date)
+head(project_df1_zoo)
+sent_score <-project_df1$Top1_sent + project_df1$Top2_sent
+project_arimamv <- data.frame(sent_score) 
+head(project_arimamv)
+
+```
+
+Then change zoo object to ts for better auto.arima performance as this function applies to regular time series dataset   
+
+```{r}
+project_arimamv_ts <- as.ts(project_arimamv)
+head(project_arimamv_ts)
+
+```
+
+
+### Data Split
+Prepare data frame for ARIMA Performance Analytics 
+
+```{r}
+# Split ts.dataframe to start prediction 
+
+
+train_set_arimamvts <- project_arimamv_ts[1:train_Top1,]
+test_set_arimamvts  <- project_arimamv_ts[(train_Top1+1):n,]
+
+```
+
+Train the ARIMA prediction model 
+```{r}
+library(forecast)
+market_predict_arimamvts_train <- auto.arima(train_set_arimamvts, trace = TRUE) 
+
+market_predict_arimamvts_train
+summary(market_predict_arimamvts_train)
+```
+ 
+
+Apply the ARIMA algorithm on Testing set 
+
+```{r}
+market_pred_arimamv_test <- auto.arima(test_set_arimamvts)
+market_pred_arimamv_test
+summary(market_pred_arimamv_test)
+```
+ARIMA(1,0,2)
+
+```{r}
+library(forecast)
+market_predict_arimamvts_test <- forecast(market_pred_arimamv_test)
+market_predict_arimamvts_test
+```
+
+```{r}
+market_predict_arimamvts_test
+summary(market_predict_arimamvts_test)
+
+```
+
+Plot the ARIMA Prediction Model 
+
+```{r}
+plot(market_predict_arimamvts_test)
+
+```
+
+
+```{r}
+library(forecast)
+market_predict_arimamvts_test %>% forecast(h=8) %>% autoplot(include=80)
+```
+
+Measure p-value of the model 
+
+```{r}
+#install.packages("lmtest")
+library(lmtest)
+
+coeftest(market_pred_arimamv_test)
+
+```
+
+
+
+# 3- Bigram Sentiment Analysis for Top1 Reddit Headline   
+The plan is to start tokenizing with two words creating a bigram. This includes measuring tf-idf of Top1 bigram as well
+
+## Top1 Bigram - Data Preparation  
+```{r}
+# Create new dataframe to include Top1 for tokenization 
+# Top1_updt is the clean Top1 column; i.e., without stop words, without punctuation, without the letter b at the begining 
+
+head(project_updt)
+project_bigrams_df1 <- data.frame(project_updt$Top1_updt, stringsAsFactors=FALSE)
+head(project_bigrams_df1)
+```
+
+## Bigram Tokenization  
+```{r}
+
+Top1_bigram <- project_updt %>% unnest_tokens(ngram, Top1_updt, token = "ngrams", n = 2) 
+head(Top1_bigram) 
+
+```
+
+## Counting and Filtering Top1 bigrams 
+```{r}
+Top1_bigram %>% 
+  count(ngram, sort = TRUE)
+ 
+```
+
+## Filtering stop words 
+Seperate each column based on one space seperator to remove stop words
+``` {r}
+# Uninteresting to have "in a", "to be", ...etc. and need to get rid of them. 
+# Seperating word1 from word2 each one in a column 
+Top1_bigram_seperated <- Top1_bigram %>%
+  separate(ngram, c("word1", "word2"), sep = " ")
+head(Top1_bigram_seperated)
+```
+
+Filter stop words 
+```{r}
+Top1_bigram_filtered <- Top1_bigram_seperated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+head(Top1_bigram_filtered) 
+
+```
+Counting Top1 Bigrams without stop words 
+
+```{r}
+# clean count of words 
+Top1_bigram_counts <- Top1_bigram_filtered %>% 
+  count(word1, word2, sort = TRUE)
+
+head(Top1_bigram_counts) 
+```
+Unite words to form Bigram again in one column 
+
+```{r}
+# let's recombine the columns into one 
+Top1_bigram_united <- Top1_bigram_filtered %>%
+  unite(ngram, word1, word2, sep = " ")
+
+head(Top1_bigram_united) 
+```
+## Measuring Bigram TF-IDF
+
+```{r}
+# Not done yet
+#head(project_bigrams_df1)
+
+Top1_doc <- paste(project_bigrams_df1$project_updt.Top1_updt, collapse = " ")
+#str(Top1_doc)
+Top1_df <- data.frame(Top1_doc)
+
+Top1_bigram_tf_idf <- Top1_bigram_united %>% 
+  count(Top1_df$Top1_doc, ngram) %>%
+  bind_tf_idf(ngram, Top1_df$Top1_doc, n) %>%
+  arrange(desc(tf_idf))
+
+head(Top1_bigram_tf_idf)
+```
+
+
+Top 10 words with highest TF-IDF 
+```{r}
+# Order descendingly by n and choose top10 
+
+Top1_bigram_top10 <- Top1_bigram_tf_idf %>%
+   select(ngram, n) %>% arrange(desc(n)) %>% top_n (10) 
+
+Top1_bigram_top10
+```
+Let's plot the bigram repeated the most in the first Rddit Headline 
+
+```{r}
+library(ggplot2) 
+
+ggplot(Top1_bigram_top10, aes(x=ngram, y=n, fill=ngram))+
+  geom_bar(stat="identity")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylab("Number of Times Bigram Appears in Top1 Reddit Headlines")+
+  xlab("")+
+  guides(fill=FALSE)
+```
+
+# Bigram Sentiment Univariate Analysis (Top1)
+
+```{r}
+# Now the data is organized into bigrams, let's see how often words are preceded by a word like "not" 
+
+Top1_bigram_seperated %>%
+  filter(word1 == "not") %>%
+  count(word1, word2, sort = TRUE)
+
+```
+
+Not isn't just the word that provides some context. We can have some common words in texting. Let's examine it all at once 
+
+```{r}
+negation_words <- c("not", "no", "never", "without")
+
+negated_words <- Top1_bigram_seperated %>%
+  filter(word1 %in% negation_words) %>%
+  count(word1, word2, sort = TRUE)
+negated_words
+```
+
+We can plot the most words preceeded with the word "not" 
+
+```{r}
+library(ggplot2) 
+
+negated_words %>%
+  mutate(contribution = n ) %>%
+  arrange(desc(abs(contribution))) %>%
+  head(20) %>%
+  mutate(word2 = reorder(word2, contribution)) %>%
+  ggplot(aes(word2, n, fill = n > 0)) +
+  geom_col(show.legend = FALSE) +
+  xlab("Words preceded by a negative word") +
+  ylab("Number of occurrences") +
+  coord_flip() 
+
+```
+
+
+
+
